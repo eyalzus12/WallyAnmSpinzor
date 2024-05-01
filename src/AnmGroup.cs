@@ -3,13 +3,13 @@ using System.IO;
 
 namespace WallyAnmSpinzor;
 
-public class AnmStore
+public class AnmGroup
 {
     public required string Index { get; set; }
     public required string FileName { get; set; }
     public required List<AnmAnimation> Animations { get; set; }
 
-    internal static AnmStore CreateFrom(BinaryReader br)
+    internal static AnmGroup CreateFrom(BinaryReader br)
     {
         string index = br.ReadFlashString();
         string fileName = br.ReadFlashString();

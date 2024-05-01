@@ -7,7 +7,7 @@ namespace WallyAnmSpinzor;
 public class AnmFile
 {
     public required byte[] Header { get; set; }
-    public required Dictionary<string, AnmStore> AnimationStorages { get; set; }
+    public required Dictionary<string, AnmGroup> AnimationGroups { get; set; }
 
     public static AnmFile CreateFrom(Stream stream)
     {
@@ -19,18 +19,18 @@ public class AnmFile
 
     internal static AnmFile CreateFrom(BinaryReader br, byte[] header)
     {
-        Dictionary<string, AnmStore> animationStorages = [];
+        Dictionary<string, AnmGroup> animationGroups = [];
         while (br.ReadBoolean())
         {
             string name = br.ReadFlashString();
-            AnmStore storage = AnmStore.CreateFrom(br);
-            animationStorages[name] = storage;
+            AnmGroup group = AnmGroup.CreateFrom(br);
+            animationGroups[name] = group;
         }
 
         return new()
         {
             Header = header,
-            AnimationStorages = animationStorages,
+            AnimationGroups = animationGroups,
         };
     }
 }
