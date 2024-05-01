@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -6,18 +7,23 @@ namespace WallyAnmSpinzor;
 
 public class AnmFile
 {
-    public required byte[] Header { get; set; }
+    public required int Header { get; set; }
     public required Dictionary<string, AnmGroup> AnimationGroups { get; set; }
 
     public static AnmFile CreateFrom(Stream stream)
     {
-        byte[] header = new byte[4]; stream.ReadExactly(header, 0, 4);
+        // why isn't this simpler to do
+        byte[] headerBytes = new byte[4];
+        stream.ReadExactly(headerBytes, 0, 4);
+        if (!BitConverter.IsLittleEndian) Array.Reverse(headerBytes);
+        int header = BitConverter.ToInt32(headerBytes);
+
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
         using BinaryReader br = new(decompressedStream);
         return CreateFrom(br, header);
     }
 
-    internal static AnmFile CreateFrom(BinaryReader br, byte[] header)
+    internal static AnmFile CreateFrom(BinaryReader br, int header)
     {
         Dictionary<string, AnmGroup> animationGroups = [];
         while (br.ReadBoolean())
