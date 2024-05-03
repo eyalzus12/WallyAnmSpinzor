@@ -1,7 +1,6 @@
 using System;
 using System.Buffers.Binary;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace WallyAnmSpinzor;
@@ -10,79 +9,144 @@ public class ByteReader(Stream stream, bool leaveOpen = false) : IDisposable
 {
     private bool _disposedValue;
 
-    private byte[] ExtractBytes<T>() where T : unmanaged
-    {
-        byte[] buffer = new byte[Unsafe.SizeOf<T>()];
-        stream.ReadExactly(buffer, 0, buffer.Length);
-        return buffer;
-    }
-
     public byte[] ReadBytes(int count)
     {
-        byte[] buffer = new byte[count];
-        stream.ReadExactly(buffer, 0, buffer.Length);
-        return buffer;
+        Span<byte> buffer = stackalloc byte[count];
+        stream.ReadExactly(buffer);
+        return buffer.ToArray();
     }
 
-    public string ReadString(int length) => Encoding.UTF8.GetString(ReadBytes(length));
-
-    private static ulong FromBE(byte[] buffer)
+    public string ReadString(int length)
     {
-        ulong result = 0;
-        for (int i = 0; i < buffer.Length; ++i)
-        {
-            result |= (ulong)buffer[i] << (8 * i);
-        }
-        return result;
+        Span<byte> buffer = stackalloc byte[length];
+        stream.ReadExactly(buffer);
+        return Encoding.UTF8.GetString(buffer);
     }
 
-    private static ulong FromLE(byte[] buffer)
-    {
-        ulong result = 0;
-        for (int i = 0; i < buffer.Length; ++i)
-        {
-            result <<= 8;
-            result |= buffer[i];
-        }
-        return result;
-    }
-
-    public byte ReadU8() => ExtractBytes<byte>()[0];
+    public byte ReadU8() => (byte)stream.ReadByte();
     public sbyte ReadI8() => (sbyte)ReadU8();
 
-    public ushort ReadU16LE() => BinaryPrimitives.ReadUInt16LittleEndian(ExtractBytes<ushort>());
-    public ushort ReadU16BE() => BinaryPrimitives.ReadUInt16BigEndian(ExtractBytes<ushort>());
-    public short ReadI16LE() => BinaryPrimitives.ReadInt16LittleEndian(ExtractBytes<short>());
-    public short ReadI16BE() => BinaryPrimitives.ReadInt16BigEndian(ExtractBytes<short>());
+    public ushort ReadU16LE()
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt16LittleEndian(buffer);
+    }
+    public short ReadI16LE() => (short)ReadU16LE();
 
-    public uint ReadU24LE() => (uint)FromLE(ReadBytes(3));
-    public uint ReadU24BE() => (uint)FromBE(ReadBytes(3));
-    public int ReadI24LE() => (int)FromLE(ReadBytes(3));
-    public int ReadI24BE() => (int)FromBE(ReadBytes(3));
+    public ushort ReadU16BE()
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+    }
+    public short ReadI16BE() => (short)ReadU16BE();
 
-    public uint ReadU32LE() => BinaryPrimitives.ReadUInt32LittleEndian(ExtractBytes<uint>());
-    public uint ReadU32BE() => BinaryPrimitives.ReadUInt32BigEndian(ExtractBytes<uint>());
-    public int ReadI32LE() => BinaryPrimitives.ReadInt32LittleEndian(ExtractBytes<int>());
-    public int ReadI32BE() => BinaryPrimitives.ReadInt32BigEndian(ExtractBytes<int>());
+    public uint ReadU24LE()
+    {
+        Span<byte> buffer = stackalloc byte[3];
+        stream.ReadExactly(buffer);
+        return (uint)((buffer[0] << 0x10) | (buffer[1] << 0x08) | (buffer[2] << 0x00));
+    }
+    public int ReadI24LE() => (int)((ReadU24LE() << 8) >> 8); // the shift is for sign extension
 
-    public ulong ReadU64LE() => BinaryPrimitives.ReadUInt64LittleEndian(ExtractBytes<ulong>());
-    public ulong ReadU64BE() => BinaryPrimitives.ReadUInt64BigEndian(ExtractBytes<ulong>());
-    public long ReadI64LE() => BinaryPrimitives.ReadInt64LittleEndian(ExtractBytes<long>());
-    public long ReadI64BE() => BinaryPrimitives.ReadInt64BigEndian(ExtractBytes<long>());
+    public uint ReadU24BE()
+    {
+        Span<byte> buffer = stackalloc byte[3];
+        stream.ReadExactly(buffer);
+        return (uint)((buffer[2] << 0x10) | (buffer[1] << 0x08) | (buffer[0] << 0x00));
+    }
+    public int ReadI24BE() => (int)((ReadU24BE() << 8) >> 8); // the shift is for sign extension
 
-    public UInt128 ReadU128LE() => BinaryPrimitives.ReadUInt128LittleEndian(ExtractBytes<UInt128>());
-    public UInt128 ReadU128BE() => BinaryPrimitives.ReadUInt128BigEndian(ExtractBytes<UInt128>());
-    public Int128 ReadI128LE() => BinaryPrimitives.ReadInt128LittleEndian(ExtractBytes<Int128>());
-    public Int128 ReadI128BE() => BinaryPrimitives.ReadInt128BigEndian(ExtractBytes<Int128>());
+    public uint ReadU32LE()
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt32LittleEndian(buffer);
+    }
+    public int ReadI32LE() => (int)ReadU32LE();
 
-    public Half ReadF16LE() => BinaryPrimitives.ReadHalfLittleEndian(ExtractBytes<Half>());
-    public Half ReadF16BE() => BinaryPrimitives.ReadHalfBigEndian(ExtractBytes<Half>());
+    public uint ReadU32BE()
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt32BigEndian(buffer);
+    }
+    public int ReadI32BE() => (int)ReadU32BE();
 
-    public float ReadF32LE() => BinaryPrimitives.ReadSingleLittleEndian(ExtractBytes<float>());
-    public float ReadF32BE() => BinaryPrimitives.ReadSingleBigEndian(ExtractBytes<float>());
+    public ulong ReadU64LE()
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt64LittleEndian(buffer);
+    }
+    public long ReadI64LE() => (long)ReadU64LE();
 
-    public double ReadF64LE() => BinaryPrimitives.ReadDoubleLittleEndian(ExtractBytes<double>());
-    public double ReadF64BE() => BinaryPrimitives.ReadDoubleBigEndian(ExtractBytes<double>());
+    public ulong ReadU64BE()
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt64BigEndian(buffer);
+    }
+    public long ReadI64BE() => (long)ReadU64BE();
+
+    public UInt128 ReadU128LE()
+    {
+        Span<byte> buffer = stackalloc byte[16];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt128LittleEndian(buffer);
+    }
+    public Int128 ReadI128LE() => (Int128)ReadU128LE();
+
+    public UInt128 ReadU128BE()
+    {
+        Span<byte> buffer = stackalloc byte[16];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt128BigEndian(buffer);
+    }
+    public Int128 ReadI128BE() => (Int128)ReadU128BE();
+
+    public Half ReadF16LE()
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadHalfLittleEndian(buffer);
+    }
+
+    public Half ReadF16BE()
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadHalfBigEndian(buffer);
+    }
+
+    public float ReadF32LE()
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadSingleLittleEndian(buffer);
+    }
+
+    public float ReadF32BE()
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadSingleBigEndian(buffer);
+    }
+
+    public double ReadF64LE()
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadDoubleLittleEndian(buffer);
+    }
+
+    public double ReadF64BE()
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadDoubleBigEndian(buffer);
+    }
 
     public string ReadFlashString() => ReadString(ReadU16LE());
 
@@ -100,6 +164,7 @@ public class ByteReader(Stream stream, bool leaveOpen = false) : IDisposable
         return result;
     }
     public uint ReadFlashVarU32() => (uint)ReadFlashVarInteger(5);
+    // hacky way to get sign extension
     public int ReadFlashVarI32() => BitConverter.ToInt32(BitConverter.GetBytes(ReadFlashVarU32()));
     public uint ReadFlashVarU30() => (uint)ReadFlashVarInteger(4);
 
