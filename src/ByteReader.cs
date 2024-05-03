@@ -6,33 +6,27 @@ using System.Text;
 
 namespace WallyAnmSpinzor;
 
-public class ByteReader : IDisposable
+public class ByteReader(Stream stream, bool leaveOpen = false) : IDisposable
 {
-    private readonly Stream _stream;
-    private readonly bool _leaveOpen;
     private bool _disposedValue;
-
-    public ByteReader(Stream stream, bool leaveOpen = false)
-    {
-        _stream = stream;
-        _leaveOpen = leaveOpen;
-    }
 
     private byte[] ExtractBytes<T>() where T : unmanaged
     {
         byte[] buffer = new byte[Unsafe.SizeOf<T>()];
-        _stream.ReadExactly(buffer, 0, buffer.Length);
+        stream.ReadExactly(buffer, 0, buffer.Length);
         return buffer;
     }
 
     public byte[] ReadBytes(int count)
     {
         byte[] buffer = new byte[count];
-        _stream.ReadExactly(buffer, 0, buffer.Length);
+        stream.ReadExactly(buffer, 0, buffer.Length);
         return buffer;
     }
 
-    private ulong FromBE(byte[] buffer)
+    public string ReadString(int length) => Encoding.UTF8.GetString(ReadBytes(length));
+
+    private static ulong FromBE(byte[] buffer)
     {
         ulong result = 0;
         for (int i = 0; i < buffer.Length; ++i)
@@ -42,7 +36,7 @@ public class ByteReader : IDisposable
         return result;
     }
 
-    private ulong FromLE(byte[] buffer)
+    private static ulong FromLE(byte[] buffer)
     {
         ulong result = 0;
         for (int i = 0; i < buffer.Length; ++i)
@@ -90,7 +84,7 @@ public class ByteReader : IDisposable
     public double ReadF64LE() => BinaryPrimitives.ReadDoubleLittleEndian(ExtractBytes<double>());
     public double ReadF64BE() => BinaryPrimitives.ReadDoubleBigEndian(ExtractBytes<double>());
 
-    public string ReadFlashString() => Encoding.UTF8.GetString(ReadBytes(ReadU16LE()));
+    public string ReadFlashString() => ReadString(ReadU16LE());
 
     private ulong ReadFlashVarInteger(int bytes)
     {
@@ -109,12 +103,16 @@ public class ByteReader : IDisposable
     public int ReadFlashVarI32() => BitConverter.ToInt32(BitConverter.GetBytes(ReadFlashVarU32()));
     public uint ReadFlashVarU30() => (uint)ReadFlashVarInteger(4);
 
+    public bool CanRead => stream.CanRead;
+    public long Position => stream.Position;
+    public long Length => stream.Length;
+
 
     protected virtual void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {
-            if (!_leaveOpen) _stream.Dispose();
+            if (!leaveOpen) stream.Dispose();
             _disposedValue = true;
         }
     }
