@@ -13,8 +13,8 @@ public class AnmFile
 
     public static AnmFile CreateFrom(Stream stream)
     {
-        byte[] headerBytes = new byte[4];
-        stream.ReadExactly(headerBytes, 0, 4);
+        Span<byte> headerBytes = stackalloc byte[4];
+        stream.ReadExactly(headerBytes);
         int header = BinaryPrimitives.ReadInt32LittleEndian(headerBytes);
 
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
