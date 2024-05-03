@@ -14,22 +14,22 @@ public class AnmAnimation
     public required List<uint> Data { get; set; }
     public required List<AnmFrame> Frames { get; set; }
 
-    internal static AnmAnimation CreateFrom(BinaryReader br)
+    internal static AnmAnimation CreateFrom(ByteReader br)
     {
         string name = br.ReadFlashString();
-        uint frameCount = br.ReadUInt32();
-        uint loopStart = br.ReadUInt32();
-        uint recoveryStart = br.ReadUInt32();
-        uint freeStart = br.ReadUInt32();
-        uint previewFrame = br.ReadUInt32();
-        uint baseStart = br.ReadUInt32();
-        uint dataSize = br.ReadUInt32();
+        uint frameCount = br.ReadU32LE();
+        uint loopStart = br.ReadU32LE();
+        uint recoveryStart = br.ReadU32LE();
+        uint freeStart = br.ReadU32LE();
+        uint previewFrame = br.ReadU32LE();
+        uint baseStart = br.ReadU32LE();
+        uint dataSize = br.ReadU32LE();
         List<uint> data = [];
         for (int i = 0; i < dataSize; ++i)
-            data.Add(br.ReadUInt32());
+            data.Add(br.ReadU32LE());
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        _ = br.ReadUInt32();
+        _ = br.ReadU32LE();
         List<AnmFrame> frames = [];
         for (int i = 0; i < frameCount; ++i)
             frames.Add(AnmFrame.CreateFrom(br, i == 0 ? null : frames[i - 1]));

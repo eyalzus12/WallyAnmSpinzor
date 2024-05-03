@@ -14,15 +14,15 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone CreateFrom(BinaryReader br)
+    internal static AnmBone CreateFrom(ByteReader br)
     {
-        ushort id = br.ReadUInt16();
-        bool opaque = br.ReadBoolean();
+        ushort id = br.ReadU16LE();
+        bool opaque = br.ReadU8() != 0;
         bool identity = false;
         bool symmetric = false;
-        if (br.ReadBoolean())
+        if (br.ReadU8() != 0)
         {
-            if (br.ReadBoolean()) identity = true;
+            if (br.ReadU8() != 0) identity = true;
             else symmetric = true;
         }
 
@@ -34,8 +34,8 @@ public sealed class AnmBone
         }
         else
         {
-            scaleX = br.ReadSingle();
-            rotateSkew0 = br.ReadSingle();
+            scaleX = br.ReadF32LE();
+            rotateSkew0 = br.ReadF32LE();
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -43,17 +43,17 @@ public sealed class AnmBone
             }
             else
             {
-                rotateSkew1 = br.ReadSingle();
-                scaleY = br.ReadSingle();
+                rotateSkew1 = br.ReadF32LE();
+                scaleY = br.ReadF32LE();
             }
         }
-        float x = br.ReadSingle();
-        float y = br.ReadSingle();
-        short frame = br.ReadInt16();
+        float x = br.ReadF32LE();
+        float y = br.ReadF32LE();
+        short frame = br.ReadI16LE();
         double opacity = 1.0;
         if (!opaque)
         {
-            opacity = br.ReadByte() / 255.0;
+            opacity = br.ReadU8() / 255.0;
         }
 
         return new()

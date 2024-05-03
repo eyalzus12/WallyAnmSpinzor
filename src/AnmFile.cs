@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -12,21 +13,19 @@ public class AnmFile
 
     public static AnmFile CreateFrom(Stream stream)
     {
-        // why isn't this simpler to do
         byte[] headerBytes = new byte[4];
         stream.ReadExactly(headerBytes, 0, 4);
-        if (!BitConverter.IsLittleEndian) Array.Reverse(headerBytes);
-        int header = BitConverter.ToInt32(headerBytes);
+        int header = BinaryPrimitives.ReadInt32LittleEndian(headerBytes);
 
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
-        using BinaryReader br = new(decompressedStream);
+        using ByteReader br = new(decompressedStream);
         return CreateFrom(br, header);
     }
 
-    internal static AnmFile CreateFrom(BinaryReader br, int header)
+    internal static AnmFile CreateFrom(ByteReader br, int header)
     {
         Dictionary<string, AnmGroup> animationGroups = [];
-        while (br.ReadBoolean())
+        while (br.ReadU8() != 0)
         {
             string name = br.ReadFlashString();
             AnmGroup group = AnmGroup.CreateFrom(br);

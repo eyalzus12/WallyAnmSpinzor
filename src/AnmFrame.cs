@@ -11,11 +11,11 @@ public sealed class AnmFrame
         public required double X { get; set; }
         public required double Y { get; set; }
 
-        internal static Offset? CreateFrom(BinaryReader br)
+        internal static Offset? CreateFrom(ByteReader br)
         {
-            if (!br.ReadBoolean()) return null;
-            double x = br.ReadDouble();
-            double y = br.ReadDouble();
+            if (br.ReadU8() == 0) return null;
+            double x = br.ReadF64LE();
+            double y = br.ReadF64LE();
             return new() { X = x, Y = y };
         }
     }
@@ -26,23 +26,23 @@ public sealed class AnmFrame
     public required double Rotation { get; set; }
     public required List<AnmBone> Bones { get; set; }
 
-    internal static AnmFrame CreateFrom(BinaryReader br, AnmFrame? prev)
+    internal static AnmFrame CreateFrom(ByteReader br, AnmFrame? prev)
     {
-        ushort id = br.ReadUInt16();
+        ushort id = br.ReadU16LE();
         Offset? offsetA = Offset.CreateFrom(br);
         Offset? offsetB = Offset.CreateFrom(br);
-        double rotation = br.ReadDouble();
-        short bonesCount = br.ReadInt16();
+        double rotation = br.ReadF64LE();
+        short bonesCount = br.ReadI16LE();
         List<AnmBone> bones = [];
         for (int i = 0; i < bonesCount; ++i)
         {
-            if (br.ReadBoolean())
+            if (br.ReadU8() != 0)
             {
                 if (prev is null) throw new Exception("Bone duplication in first animation frame");
                 bones.Add(prev.Bones[i].Clone());
-                if (!br.ReadBoolean())
+                if (br.ReadU8() == 0)
                 {
-                    bones[i].Frame = br.ReadInt16();
+                    bones[i].Frame = br.ReadI16LE();
                 }
             }
             else
