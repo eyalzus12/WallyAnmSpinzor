@@ -1,3 +1,5 @@
+using System;
+using System.Buffers.Binary;
 using System.IO;
 
 namespace WallyAnmSpinzor;
@@ -14,15 +16,21 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone CreateFrom(ByteReader br)
+    internal static AnmBone CreateFrom(Stream stream)
     {
-        ushort id = br.ReadU16LE();
-        bool opaque = br.ReadU8() != 0;
+        Span<byte> buffer = stackalloc byte[4];
+
+        stream.ReadExactly(buffer[..2]);
+        ushort id = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        stream.ReadExactly(buffer[..1]);
+        bool opaque = buffer[0] != 0;
         bool identity = false;
         bool symmetric = false;
-        if (br.ReadU8() != 0)
+        stream.ReadExactly(buffer[..1]);
+        if (buffer[0] != 0)
         {
-            if (br.ReadU8() != 0) identity = true;
+            stream.ReadExactly(buffer[..1]);
+            if (buffer[0] != 0) identity = true;
             else symmetric = true;
         }
 
@@ -34,8 +42,10 @@ public sealed class AnmBone
         }
         else
         {
-            scaleX = br.ReadF32LE();
-            rotateSkew0 = br.ReadF32LE();
+            stream.ReadExactly(buffer[..4]);
+            scaleX = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+            stream.ReadExactly(buffer[..4]);
+            rotateSkew0 = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -43,17 +53,23 @@ public sealed class AnmBone
             }
             else
             {
-                rotateSkew1 = br.ReadF32LE();
-                scaleY = br.ReadF32LE();
+                stream.ReadExactly(buffer[..4]);
+                rotateSkew1 = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+                stream.ReadExactly(buffer[..4]);
+                scaleY = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
             }
         }
-        float x = br.ReadF32LE();
-        float y = br.ReadF32LE();
-        short frame = br.ReadI16LE();
+        stream.ReadExactly(buffer[..4]);
+        float x = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        float y = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..2]);
+        short frame = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
         double opacity = 1.0;
         if (!opaque)
         {
-            opacity = br.ReadU8() / 255.0;
+            stream.ReadExactly(buffer[..1]);
+            opacity = buffer[0] / 255.0;
         }
 
         return new()
@@ -72,14 +88,14 @@ public sealed class AnmBone
 
     internal AnmBone Clone() => new()
     {
-        Id = this.Id,
-        ScaleX = this.ScaleX,
-        RotateSkew0 = this.RotateSkew0,
-        RotateSkew1 = this.RotateSkew1,
-        ScaleY = this.ScaleY,
-        X = this.X,
-        Y = this.Y,
-        Opacity = this.Opacity,
-        Frame = this.Frame,
+        Id = Id,
+        ScaleX = ScaleX,
+        RotateSkew0 = RotateSkew0,
+        RotateSkew1 = RotateSkew1,
+        ScaleY = ScaleY,
+        X = X,
+        Y = Y,
+        Opacity = Opacity,
+        Frame = Frame,
     };
 }

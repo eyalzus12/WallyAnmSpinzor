@@ -1,4 +1,8 @@
+using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace WallyAnmSpinzor;
 
@@ -13,25 +17,43 @@ public class AnmAnimation
     public required List<uint> Data { get; set; }
     public required List<AnmFrame> Frames { get; set; }
 
-    internal static AnmAnimation CreateFrom(ByteReader br)
+    internal static AnmAnimation CreateFrom(Stream stream)
     {
-        string name = br.ReadFlashString();
-        uint frameCount = br.ReadU32LE();
-        uint loopStart = br.ReadU32LE();
-        uint recoveryStart = br.ReadU32LE();
-        uint freeStart = br.ReadU32LE();
-        uint previewFrame = br.ReadU32LE();
-        uint baseStart = br.ReadU32LE();
-        uint dataSize = br.ReadU32LE();
-        List<uint> data = [];
+        Span<byte> buffer = stackalloc byte[4];
+
+        stream.ReadExactly(buffer[..2]);
+        ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        Span<byte> nameBuffer = stackalloc byte[nameLength];
+        stream.ReadExactly(nameBuffer);
+        string name = Encoding.UTF8.GetString(nameBuffer);
+
+        stream.ReadExactly(buffer[..4]);
+        uint frameCount = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint loopStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint recoveryStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint freeStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint previewFrame = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint baseStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        stream.ReadExactly(buffer[..4]);
+        uint dataSize = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        List<uint> data = new((int)dataSize);
         for (int i = 0; i < dataSize; ++i)
-            data.Add(br.ReadU32LE());
+        {
+            stream.ReadExactly(buffer[..4]);
+            data.Add(BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]));
+        }
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        _ = br.ReadU32LE();
-        List<AnmFrame> frames = [];
+        stream.ReadExactly(buffer[..4]);
+
+        List<AnmFrame> frames = new((int)frameCount);
         for (int i = 0; i < frameCount; ++i)
-            frames.Add(AnmFrame.CreateFrom(br, i == 0 ? null : frames[i - 1]));
+            frames.Add(AnmFrame.CreateFrom(stream, i == 0 ? null : frames[i - 1]));
 
         return new()
         {

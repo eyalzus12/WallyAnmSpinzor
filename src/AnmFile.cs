@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 
 namespace WallyAnmSpinzor;
 
@@ -14,22 +15,32 @@ public class AnmFile
     public static AnmFile CreateFrom(Stream stream)
     {
         Span<byte> headerBytes = stackalloc byte[4];
-        stream.ReadExactly(headerBytes);
+        stream.ReadExactly(headerBytes[..4]);
         int header = BinaryPrimitives.ReadInt32LittleEndian(headerBytes);
 
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
-        using ByteReader br = new(decompressedStream);
-        return CreateFrom(br, header);
+        return CreateFrom(decompressedStream, header);
     }
 
-    internal static AnmFile CreateFrom(ByteReader br, int header)
+    internal static AnmFile CreateFrom(Stream stream, int header)
     {
+        Span<byte> buffer = stackalloc byte[2];
+        byte[] stringBuffer;
+
         Dictionary<string, AnmGroup> animationGroups = [];
-        while (br.ReadU8() != 0)
+        stream.ReadExactly(buffer[..1]);
+        while (buffer[0] != 0)
         {
-            string name = br.ReadFlashString();
-            AnmGroup group = AnmGroup.CreateFrom(br);
+            stream.ReadExactly(buffer[..2]);
+            ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+            stringBuffer = new byte[nameLength];
+            stream.ReadExactly(stringBuffer);
+            string name = Encoding.UTF8.GetString(stringBuffer);
+
+            AnmGroup group = AnmGroup.CreateFrom(stream);
             animationGroups[name] = group;
+
+            stream.ReadExactly(buffer[..1]);
         }
 
         return new()
