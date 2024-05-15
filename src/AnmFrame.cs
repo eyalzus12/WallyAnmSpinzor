@@ -20,10 +20,8 @@ public sealed class AnmFrame
     public required double Rotation { get; set; }
     public required List<AnmBone> Bones { get; set; }
 
-    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev)
+    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev, Span<byte> buffer)
     {
-        Span<byte> buffer = stackalloc byte[8];
-
         stream.ReadExactly(buffer[..2]);
         ushort id = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
 
@@ -73,7 +71,7 @@ public sealed class AnmFrame
             }
             else
             {
-                bones.Add(AnmBone.CreateFrom(stream));
+                bones.Add(AnmBone.CreateFrom(stream, buffer));
             }
         }
 

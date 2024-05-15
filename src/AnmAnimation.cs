@@ -2,13 +2,11 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace WallyAnmSpinzor;
 
 public class AnmAnimation
 {
-    public required string Name { get; set; }
     public required uint LoopStart { get; set; }
     public required uint RecoveryStart { get; set; }
     public required uint FreeStart { get; set; }
@@ -17,16 +15,8 @@ public class AnmAnimation
     public required List<uint> Data { get; set; }
     public required List<AnmFrame> Frames { get; set; }
 
-    internal static AnmAnimation CreateFrom(Stream stream)
+    internal static AnmAnimation CreateFrom(Stream stream, Span<byte> buffer)
     {
-        Span<byte> buffer = stackalloc byte[4];
-
-        stream.ReadExactly(buffer[..2]);
-        ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        Span<byte> nameBuffer = stackalloc byte[nameLength];
-        stream.ReadExactly(nameBuffer);
-        string name = Encoding.UTF8.GetString(nameBuffer);
-
         stream.ReadExactly(buffer[..4]);
         uint frameCount = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
         stream.ReadExactly(buffer[..4]);
@@ -53,11 +43,13 @@ public class AnmAnimation
 
         List<AnmFrame> frames = new((int)frameCount);
         for (int i = 0; i < frameCount; ++i)
-            frames.Add(AnmFrame.CreateFrom(stream, i == 0 ? null : frames[i - 1]));
+        {
+            AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
+            frames.Add(AnmFrame.CreateFrom(stream, prevFrame, buffer));
+        }
 
         return new()
         {
-            Name = name,
             LoopStart = loopStart,
             RecoveryStart = recoveryStart,
             FreeStart = freeStart,

@@ -16,10 +16,8 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone CreateFrom(Stream stream)
+    internal static AnmBone CreateFrom(Stream stream, Span<byte> buffer)
     {
-        Span<byte> buffer = stackalloc byte[4];
-
         stream.ReadExactly(buffer[..2]);
         ushort id = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
         stream.ReadExactly(buffer[..1]);

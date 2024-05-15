@@ -10,35 +10,29 @@ namespace WallyAnmSpinzor;
 public class AnmFile
 {
     public required int Header { get; set; }
-    public required Dictionary<string, AnmGroup> AnimationGroups { get; set; }
+    public required Dictionary<string, AnmGroup> Groups { get; set; }
 
     public static AnmFile CreateFrom(Stream stream)
     {
-        Span<byte> headerBytes = stackalloc byte[4];
-        stream.ReadExactly(headerBytes[..4]);
-        int header = BinaryPrimitives.ReadInt32LittleEndian(headerBytes);
+        // needs to be 8 bytes for AnmFrame
+        Span<byte> buffer = stackalloc byte[8];
+
+        stream.ReadExactly(buffer[..4]);
+        int header = BinaryPrimitives.ReadInt32LittleEndian(buffer[..4]);
 
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
-        return CreateFrom(decompressedStream, header);
+        return CreateFrom(decompressedStream, header, buffer);
     }
 
-    internal static AnmFile CreateFrom(Stream stream, int header)
+    internal static AnmFile CreateFrom(Stream stream, int header, Span<byte> buffer)
     {
-        Span<byte> buffer = stackalloc byte[2];
-        byte[] stringBuffer;
-
-        Dictionary<string, AnmGroup> animationGroups = [];
+        Dictionary<string, AnmGroup> groups = [];
         stream.ReadExactly(buffer[..1]);
         while (buffer[0] != 0)
         {
-            stream.ReadExactly(buffer[..2]);
-            ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-            stringBuffer = new byte[nameLength];
-            stream.ReadExactly(stringBuffer);
-            string name = Encoding.UTF8.GetString(stringBuffer);
-
-            AnmGroup group = AnmGroup.CreateFrom(stream);
-            animationGroups[name] = group;
+            string name = ReadString(stream, buffer);
+            AnmGroup group = AnmGroup.CreateFrom(stream, buffer);
+            groups[name] = group;
 
             stream.ReadExactly(buffer[..1]);
         }
@@ -46,7 +40,16 @@ public class AnmFile
         return new()
         {
             Header = header,
-            AnimationGroups = animationGroups,
+            Groups = groups,
         };
+    }
+
+    private static string ReadString(Stream stream, Span<byte> buffer)
+    {
+        stream.ReadExactly(buffer[..2]);
+        ushort stringLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        Span<byte> stringBuffer = stackalloc byte[stringLength];
+        stream.ReadExactly(stringBuffer);
+        return Encoding.UTF8.GetString(stringBuffer);
     }
 }
