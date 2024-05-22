@@ -6,13 +6,13 @@ using System.Text;
 
 namespace WallyAnmSpinzor;
 
-public class AnmGroup
+public class AnmClass
 {
     public required string Index { get; set; }
     public required string FileName { get; set; }
     public required Dictionary<string, AnmAnimation> Animations { get; set; }
 
-    internal static AnmGroup CreateFrom(Stream stream, Span<byte> buffer)
+    internal static AnmClass CreateFrom(Stream stream, Span<byte> buffer)
     {
         stream.ReadExactly(buffer[..2]);
         ushort indexLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);

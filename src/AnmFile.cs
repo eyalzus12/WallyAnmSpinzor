@@ -10,7 +10,7 @@ namespace WallyAnmSpinzor;
 public class AnmFile
 {
     public required int Header { get; set; }
-    public required Dictionary<string, AnmGroup> Groups { get; set; }
+    public required Dictionary<string, AnmClass> Classes { get; set; }
 
     public static AnmFile CreateFrom(Stream stream)
     {
@@ -26,13 +26,13 @@ public class AnmFile
 
     internal static AnmFile CreateFrom(Stream stream, int header, Span<byte> buffer)
     {
-        Dictionary<string, AnmGroup> groups = [];
+        Dictionary<string, AnmClass> classes = [];
         stream.ReadExactly(buffer[..1]);
         while (buffer[0] != 0)
         {
             string name = ReadString(stream, buffer);
-            AnmGroup group = AnmGroup.CreateFrom(stream, buffer);
-            groups[name] = group;
+            AnmClass @class = AnmClass.CreateFrom(stream, buffer);
+            classes[name] = @class;
 
             stream.ReadExactly(buffer[..1]);
         }
@@ -40,7 +40,7 @@ public class AnmFile
         return new()
         {
             Header = header,
-            Groups = groups,
+            Classes = classes,
         };
     }
 
