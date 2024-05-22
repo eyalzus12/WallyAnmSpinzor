@@ -14,17 +14,8 @@ public class AnmClass
 
     internal static AnmClass CreateFrom(Stream stream, Span<byte> buffer)
     {
-        stream.ReadExactly(buffer[..2]);
-        ushort indexLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        Span<byte> indexBuffer = stackalloc byte[indexLength];
-        stream.ReadExactly(indexBuffer);
-        string index = Encoding.UTF8.GetString(indexBuffer);
-
-        stream.ReadExactly(buffer[..2]);
-        ushort fileNameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        Span<byte> fileNameBuffer = stackalloc byte[fileNameLength];
-        stream.ReadExactly(fileNameBuffer);
-        string fileName = Encoding.UTF8.GetString(fileNameBuffer);
+        string index = ReadString(stream, buffer);
+        string fileName = ReadString(stream, buffer);
 
         stream.ReadExactly(buffer[..4]);
         uint animationCount = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
