@@ -18,7 +18,7 @@ public sealed class AnmFrame
     public required Offset? OffsetA { get; set; }
     public required Offset? OffsetB { get; set; }
     public required double Rotation { get; set; }
-    public required List<AnmBone> Bones { get; set; }
+    public required AnmBone[] Bones { get; set; }
 
     internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev, Span<byte> buffer)
     {
@@ -53,7 +53,7 @@ public sealed class AnmFrame
         stream.ReadExactly(buffer[..2]);
         short bonesCount = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
 
-        List<AnmBone> bones = new(bonesCount);
+        AnmBone[] bones = new AnmBone[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
             stream.ReadExactly(buffer[..1]);
@@ -61,7 +61,7 @@ public sealed class AnmFrame
             {
                 if (prev is null)
                     throw new Exception("Bone duplication in first animation frame");
-                bones.Add(prev.Bones[i].Clone());
+                bones[i] = prev.Bones[i].Clone();
                 stream.ReadExactly(buffer[..1]);
                 if (buffer[0] == 0)
                 {
@@ -71,7 +71,7 @@ public sealed class AnmFrame
             }
             else
             {
-                bones.Add(AnmBone.CreateFrom(stream, buffer));
+                bones[i] = AnmBone.CreateFrom(stream, buffer);
             }
         }
 
