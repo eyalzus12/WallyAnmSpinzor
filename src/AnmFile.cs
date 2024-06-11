@@ -12,7 +12,7 @@ public class AnmFile
     public required int Header { get; set; }
     public required Dictionary<string, AnmClass> Classes { get; set; }
 
-    public static AnmFile CreateFrom(Stream stream)
+    public static AnmFile CreateFrom(Stream stream, bool leaveOpen = false)
     {
         // needs to be 8 bytes for AnmFrame
         Span<byte> buffer = stackalloc byte[8];
@@ -20,18 +20,18 @@ public class AnmFile
         stream.ReadExactly(buffer[..4]);
         int header = BinaryPrimitives.ReadInt32LittleEndian(buffer[..4]);
 
-        using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress);
+        using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
         return CreateFrom(decompressedStream, header, buffer);
     }
 
-    public void WriteTo(Stream stream)
+    public void WriteTo(Stream stream, bool leaveOpen = false)
     {
         Span<byte> buffer = stackalloc byte[8];
 
         BinaryPrimitives.WriteInt32LittleEndian(buffer[..4], Header);
         stream.Write(buffer[..4]);
 
-        using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize);
+        using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
         WriteTo(compressedStream, buffer);
     }
 
