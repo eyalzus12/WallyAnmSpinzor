@@ -84,6 +84,88 @@ public sealed class AnmBone
         };
     }
 
+    internal void WriteTo(Stream stream, Span<byte> buffer)
+    {
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], Id);
+        stream.Write(buffer[..2]);
+
+        if (Opacity == 1) stream.WriteByte(1);
+        else stream.WriteByte(0);
+
+        bool identity = IsIdentity;
+        bool symmetric = IsSymmetric;
+        if (identity || symmetric)
+        {
+            stream.WriteByte(1);
+            if (identity) stream.WriteByte(1);
+            else stream.WriteByte(0);
+        }
+        else
+        {
+            stream.WriteByte(0);
+        }
+
+        if (!identity)
+        {
+            BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], ScaleX);
+            stream.Write(buffer[..4]);
+            BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], RotateSkew0);
+            stream.Write(buffer[..4]);
+            if (!symmetric)
+            {
+                BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], RotateSkew1);
+                stream.Write(buffer[..4]);
+                BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], ScaleY);
+                stream.Write(buffer[..4]);
+            }
+        }
+        BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], X);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], Y);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], Frame);
+        stream.Write(buffer[..2]);
+        if (Opacity != 1)
+        {
+            byte opacity = (byte)Math.Round(Opacity * 255);
+            stream.WriteByte(opacity);
+        }
+    }
+
+    internal uint GetByteCount()
+    {
+        uint size = 0;
+        size += sizeof(ushort); // id
+        size += sizeof(byte); // opaque
+        size += sizeof(byte); // identity/symmetric indicator
+        if (IsIdentity)
+        {
+            size += sizeof(byte); // 2nd indicator
+        }
+        else
+        {
+            size += sizeof(float); // scaleX
+            size += sizeof(float); // rotateSkew0
+            if (IsSymmetric)
+            {
+                size += sizeof(byte); // indicator
+            }
+            else
+            {
+                size += sizeof(float); // rotateSkew1
+                size += sizeof(float); // scaleY
+            }
+        }
+        size += sizeof(float); // x
+        size += sizeof(float); // y
+        size += sizeof(short); // frame
+        if (Opacity != 1)
+        {
+            size += sizeof(byte); // opacity
+        }
+        return size;
+    }
+
     internal AnmBone Clone() => new()
     {
         Id = Id,
@@ -96,4 +178,17 @@ public sealed class AnmBone
         Opacity = Opacity,
         Frame = Frame,
     };
+
+    internal bool IsPartialCloneOf(AnmBone bone) =>
+        Id == bone.Id &&
+        ScaleX == bone.ScaleX &&
+        RotateSkew0 == bone.RotateSkew0 &&
+        RotateSkew1 == bone.RotateSkew1 &&
+        ScaleY == bone.ScaleY &&
+        X == bone.X &&
+        Y == bone.Y &&
+        Opacity == bone.Opacity;
+
+    internal bool IsIdentity => ScaleX == 1 && RotateSkew0 == 0 && RotateSkew1 == 0 && ScaleY == 1;
+    internal bool IsSymmetric => ScaleY == -ScaleX && RotateSkew0 == RotateSkew1;
 }

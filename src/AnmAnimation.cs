@@ -1,6 +1,5 @@
 using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
 using System.IO;
 
 namespace WallyAnmSpinzor;
@@ -58,5 +57,46 @@ public class AnmAnimation
             Data = data,
             Frames = frames,
         };
+    }
+
+    internal void WriteTo(Stream stream, Span<byte> buffer)
+    {
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Frames.Length);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], LoopStart);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], RecoveryStart);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], FreeStart);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], PreviewFrame);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], BaseStart);
+        stream.Write(buffer[..4]);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Data.Length);
+        stream.Write(buffer[..4]);
+        foreach (uint datum in Data)
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], datum);
+            stream.Write(buffer[..4]);
+        }
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], GetFramesByteCount());
+        stream.Write(buffer[..4]);
+        for (int i = 0; i < Frames.Length; ++i)
+        {
+            AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
+            Frames[i].WriteTo(stream, buffer, prevFrame);
+        }
+    }
+
+    internal uint GetFramesByteCount()
+    {
+        uint size = 0;
+        for (int i = 0; i < Frames.Length; ++i)
+        {
+            AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
+            size += Frames[i].GetByteCount(prevFrame);
+        }
+        return size;
     }
 }

@@ -35,6 +35,19 @@ public class AnmClass
         };
     }
 
+    internal void WriteTo(Stream stream, Span<byte> buffer)
+    {
+        WriteString(stream, buffer, Index);
+        WriteString(stream, buffer, FileName);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Animations.Count);
+        stream.Write(buffer[..4]);
+        foreach ((string name, AnmAnimation animation) in Animations)
+        {
+            WriteString(stream, buffer, name);
+            animation.WriteTo(stream, buffer);
+        }
+    }
+
     private static string ReadString(Stream stream, Span<byte> buffer)
     {
         stream.ReadExactly(buffer[..2]);
@@ -42,5 +55,14 @@ public class AnmClass
         Span<byte> stringBuffer = stackalloc byte[stringLength];
         stream.ReadExactly(stringBuffer);
         return Encoding.UTF8.GetString(stringBuffer);
+    }
+
+    private static void WriteString(Stream stream, Span<byte> buffer, string str)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(str);
+        ushort len = (ushort)bytes.Length;
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], len);
+        stream.Write(buffer[..2]);
+        stream.Write(bytes);
     }
 }

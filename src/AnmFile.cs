@@ -24,6 +24,17 @@ public class AnmFile
         return CreateFrom(decompressedStream, header, buffer);
     }
 
+    public void WriteTo(Stream stream)
+    {
+        Span<byte> buffer = stackalloc byte[8];
+
+        BinaryPrimitives.WriteInt32LittleEndian(buffer[..4], Header);
+        stream.Write(buffer[..4]);
+
+        using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize);
+        WriteTo(compressedStream, buffer);
+    }
+
     internal static AnmFile CreateFrom(Stream stream, int header, Span<byte> buffer)
     {
         Dictionary<string, AnmClass> classes = [];
@@ -44,6 +55,17 @@ public class AnmFile
         };
     }
 
+    internal void WriteTo(Stream stream, Span<byte> buffer)
+    {
+        foreach ((string name, AnmClass @class) in Classes)
+        {
+            stream.WriteByte(1);
+            WriteString(stream, buffer, name);
+            @class.WriteTo(stream, buffer);
+        }
+        stream.WriteByte(0);
+    }
+
     private static string ReadString(Stream stream, Span<byte> buffer)
     {
         stream.ReadExactly(buffer[..2]);
@@ -51,5 +73,14 @@ public class AnmFile
         Span<byte> stringBuffer = stackalloc byte[stringLength];
         stream.ReadExactly(stringBuffer);
         return Encoding.UTF8.GetString(stringBuffer);
+    }
+
+    private static void WriteString(Stream stream, Span<byte> buffer, string str)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(str);
+        ushort len = (ushort)bytes.Length;
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], len);
+        stream.Write(buffer[..2]);
+        stream.Write(bytes);
     }
 }
