@@ -13,7 +13,7 @@ public sealed class AnmFrame
         public required double Y { get; set; }
     }
 
-    public required ushort Id { get; set; }
+    public required short Id { get; set; }
     public required Offset? OffsetA { get; set; }
     public required Offset? OffsetB { get; set; }
     public required double Rotation { get; set; }
@@ -22,7 +22,7 @@ public sealed class AnmFrame
     internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev, Span<byte> buffer)
     {
         stream.ReadExactly(buffer[..2]);
-        ushort id = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        short id = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
 
         Offset? offsetA = null;
         stream.ReadExactly(buffer[..1]);
@@ -86,7 +86,7 @@ public sealed class AnmFrame
 
     internal void WriteTo(Stream stream, Span<byte> buffer, AnmFrame? prevFrame)
     {
-        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], Id);
+        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], Id);
         stream.Write(buffer[..2]);
 
         if (OffsetA is null)
@@ -146,7 +146,7 @@ public sealed class AnmFrame
     internal uint GetByteCount(AnmFrame? prevFrame)
     {
         uint size = 0;
-        size += sizeof(ushort); // id
+        size += sizeof(short); // id
         size += sizeof(byte); // OffsetA indicator
         if (OffsetA is not null)
             size += 2 * sizeof(double); // OffsetA

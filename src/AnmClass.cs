@@ -22,9 +22,8 @@ public class AnmClass
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
         for (int i = 0; i < animationCount; ++i)
         {
-            string name = ReadString(stream, buffer);
             AnmAnimation animation = AnmAnimation.CreateFrom(stream, buffer);
-            animations[name] = animation;
+            animations[animation.Name] = animation;
         }
 
         return new()
@@ -41,9 +40,8 @@ public class AnmClass
         WriteString(stream, buffer, FileName);
         BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Animations.Count);
         stream.Write(buffer[..4]);
-        foreach ((string name, AnmAnimation animation) in Animations)
+        foreach ((_, AnmAnimation animation) in Animations)
         {
-            WriteString(stream, buffer, name);
             animation.WriteTo(stream, buffer);
         }
     }

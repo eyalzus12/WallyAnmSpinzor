@@ -1,11 +1,13 @@
 using System;
 using System.Buffers.Binary;
 using System.IO;
+using System.Text;
 
 namespace WallyAnmSpinzor;
 
 public class AnmAnimation
 {
+    public required string Name { get; set; }
     public required uint LoopStart { get; set; }
     public required uint RecoveryStart { get; set; }
     public required uint FreeStart { get; set; }
@@ -16,6 +18,7 @@ public class AnmAnimation
 
     internal static AnmAnimation CreateFrom(Stream stream, Span<byte> buffer)
     {
+        string name = ReadString(stream, buffer);
         stream.ReadExactly(buffer[..4]);
         uint frameCount = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
         stream.ReadExactly(buffer[..4]);
@@ -49,6 +52,7 @@ public class AnmAnimation
 
         return new()
         {
+            Name = name,
             LoopStart = loopStart,
             RecoveryStart = recoveryStart,
             FreeStart = freeStart,
@@ -61,6 +65,7 @@ public class AnmAnimation
 
     internal void WriteTo(Stream stream, Span<byte> buffer)
     {
+        WriteString(stream, buffer, Name);
         BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Frames.Length);
         stream.Write(buffer[..4]);
         BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], LoopStart);
@@ -98,5 +103,23 @@ public class AnmAnimation
             size += Frames[i].GetByteCount(prevFrame);
         }
         return size;
+    }
+
+    private static string ReadString(Stream stream, Span<byte> buffer)
+    {
+        stream.ReadExactly(buffer[..2]);
+        ushort stringLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        Span<byte> stringBuffer = stackalloc byte[stringLength];
+        stream.ReadExactly(stringBuffer);
+        return Encoding.UTF8.GetString(stringBuffer);
+    }
+
+    private static void WriteString(Stream stream, Span<byte> buffer, string str)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(str);
+        ushort len = (ushort)bytes.Length;
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], len);
+        stream.Write(buffer[..2]);
+        stream.Write(bytes);
     }
 }
