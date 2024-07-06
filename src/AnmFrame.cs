@@ -1,5 +1,4 @@
 using System;
-using System.Buffers.Binary;
 using System.IO;
 
 namespace WallyAnmSpinzor;
@@ -21,52 +20,39 @@ public sealed class AnmFrame
 
     internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev, Span<byte> buffer)
     {
-        stream.ReadExactly(buffer[..2]);
-        short id = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
+        short id = stream.GetI16(buffer);
 
         Offset? offsetA = null;
-        stream.ReadExactly(buffer[..1]);
-        if (buffer[0] != 0)
+        if (stream.GetB())
         {
-            stream.ReadExactly(buffer[..8]);
-            double x = BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
-            stream.ReadExactly(buffer[..8]);
-            double y = BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
+            double x = stream.GetF64(buffer);
+            double y = stream.GetF64(buffer);
             offsetA = new() { X = x, Y = y, };
         }
 
         Offset? offsetB = null;
-        stream.ReadExactly(buffer[..1]);
-        if (buffer[0] != 0)
+        if (stream.GetB())
         {
-            stream.ReadExactly(buffer[..8]);
-            double x = BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
-            stream.ReadExactly(buffer[..8]);
-            double y = BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
+            double x = stream.GetF64(buffer);
+            double y = stream.GetF64(buffer);
             offsetB = new() { X = x, Y = y, };
         }
 
-        stream.ReadExactly(buffer[..8]);
-        double rotation = BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
-
-        stream.ReadExactly(buffer[..2]);
-        short bonesCount = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
+        double rotation = stream.GetF64(buffer);
+        short bonesCount = stream.GetI16(buffer);
 
         AnmBone[] bones = new AnmBone[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
-            stream.ReadExactly(buffer[..1]);
-            if (buffer[0] != 0)
+            if (stream.GetB())
             {
                 if (prev is null)
                     throw new Exception("Bone duplication in first animation frame");
+                if (prev.Bones.Length >= i)
+                    throw new Exception("Bone duplication without matching bone in previous frame");
                 bones[i] = prev.Bones[i].Clone();
-                stream.ReadExactly(buffer[..1]);
-                if (buffer[0] == 0)
-                {
-                    stream.ReadExactly(buffer[..2]);
-                    bones[i].Frame = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
-                }
+                if (!stream.GetB())
+                    bones[i].Frame = stream.GetI16(buffer);
             }
             else
             {
@@ -86,58 +72,50 @@ public sealed class AnmFrame
 
     internal void WriteTo(Stream stream, Span<byte> buffer, AnmFrame? prevFrame)
     {
-        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], Id);
-        stream.Write(buffer[..2]);
+        stream.PutI16(buffer, Id);
 
         if (OffsetA is null)
         {
-            stream.WriteByte(0);
+            stream.PutB(false);
         }
         else
         {
-            stream.WriteByte(1);
-            BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], OffsetA.X);
-            stream.Write(buffer[..8]);
-            BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], OffsetA.Y);
-            stream.Write(buffer[..8]);
+            stream.PutB(true);
+            stream.PutF64(buffer, OffsetA.X);
+            stream.PutF64(buffer, OffsetA.Y);
         }
 
         if (OffsetB is null)
         {
-            stream.WriteByte(0);
+            stream.PutB(false);
         }
         else
         {
-            stream.WriteByte(1);
-            BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], OffsetB.X);
-            stream.Write(buffer[..8]);
-            BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], OffsetB.Y);
-            stream.Write(buffer[..8]);
+            stream.PutB(true);
+            stream.PutF64(buffer, OffsetB.X);
+            stream.PutF64(buffer, OffsetB.Y);
         }
 
-        BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], Rotation);
-        stream.Write(buffer[..8]);
-        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], (short)Bones.Length);
-        stream.Write(buffer[..2]);
+        stream.PutF64(buffer, Rotation);
+        stream.PutI16(buffer, (short)Bones.Length);
         for (int i = 0; i < Bones.Length; ++i)
         {
             if (prevFrame is not null && i < prevFrame.Bones.Length && Bones[i].IsPartialCloneOf(prevFrame.Bones[i]))
             {
-                stream.WriteByte(1);
+                stream.PutB(true);
                 if (Bones[i].Frame == prevFrame.Bones[i].Frame)
                 {
-                    stream.WriteByte(1);
+                    stream.PutB(true);
                 }
                 else
                 {
-                    stream.WriteByte(0);
-                    BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], Bones[i].Frame);
-                    stream.Write(buffer[..2]);
+                    stream.PutB(false);
+                    stream.PutI16(buffer, Bones[i].Frame);
                 }
             }
             else
             {
-                stream.WriteByte(0);
+                stream.PutB(false);
                 Bones[i].WriteTo(stream, buffer);
             }
         }

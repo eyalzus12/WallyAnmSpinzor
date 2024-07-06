@@ -1,9 +1,7 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Text;
 
 namespace WallyAnmSpinzor;
 
@@ -16,10 +14,7 @@ public class AnmFile
     {
         // needs to be 8 bytes for AnmFrame
         Span<byte> buffer = stackalloc byte[8];
-
-        stream.ReadExactly(buffer[..4]);
-        int header = BinaryPrimitives.ReadInt32LittleEndian(buffer[..4]);
-
+        int header = stream.GetI32(buffer);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
         return CreateFrom(decompressedStream, header, buffer);
     }
@@ -27,10 +22,7 @@ public class AnmFile
     public void WriteTo(Stream stream, bool leaveOpen = false)
     {
         Span<byte> buffer = stackalloc byte[8];
-
-        BinaryPrimitives.WriteInt32LittleEndian(buffer[..4], Header);
-        stream.Write(buffer[..4]);
-
+        stream.PutI32(buffer, Header);
         using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
         WriteTo(compressedStream, buffer);
     }
@@ -38,14 +30,11 @@ public class AnmFile
     internal static AnmFile CreateFrom(Stream stream, int header, Span<byte> buffer)
     {
         Dictionary<string, AnmClass> classes = [];
-        stream.ReadExactly(buffer[..1]);
-        while (buffer[0] != 0)
+        while (stream.GetB())
         {
-            string name = ReadString(stream, buffer);
+            string key = stream.GetStr(buffer);
             AnmClass @class = AnmClass.CreateFrom(stream, buffer);
-            classes[name] = @class;
-
-            stream.ReadExactly(buffer[..1]);
+            classes[key] = @class;
         }
 
         return new()
@@ -57,30 +46,12 @@ public class AnmFile
 
     internal void WriteTo(Stream stream, Span<byte> buffer)
     {
-        foreach ((string name, AnmClass @class) in Classes)
+        foreach ((string key, AnmClass @class) in Classes)
         {
-            stream.WriteByte(1);
-            WriteString(stream, buffer, name);
+            stream.PutB(true);
+            stream.PutStr(buffer, key);
             @class.WriteTo(stream, buffer);
         }
-        stream.WriteByte(0);
-    }
-
-    private static string ReadString(Stream stream, Span<byte> buffer)
-    {
-        stream.ReadExactly(buffer[..2]);
-        ushort stringLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        Span<byte> stringBuffer = stackalloc byte[stringLength];
-        stream.ReadExactly(stringBuffer);
-        return Encoding.UTF8.GetString(stringBuffer);
-    }
-
-    private static void WriteString(Stream stream, Span<byte> buffer, string str)
-    {
-        byte[] bytes = Encoding.UTF8.GetBytes(str);
-        ushort len = (ushort)bytes.Length;
-        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], len);
-        stream.Write(buffer[..2]);
-        stream.Write(bytes);
+        stream.PutB(false);
     }
 }

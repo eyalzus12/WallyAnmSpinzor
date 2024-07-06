@@ -1,7 +1,5 @@
 using System;
-using System.Buffers.Binary;
 using System.IO;
-using System.Text;
 
 namespace WallyAnmSpinzor;
 
@@ -18,30 +16,22 @@ public class AnmAnimation
 
     internal static AnmAnimation CreateFrom(Stream stream, Span<byte> buffer)
     {
-        string name = ReadString(stream, buffer);
-        stream.ReadExactly(buffer[..4]);
-        uint frameCount = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint loopStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint recoveryStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint freeStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint previewFrame = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint baseStart = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        uint dataSize = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        string name = stream.GetStr(buffer);
+        uint frameCount = stream.GetU32(buffer);
+        uint loopStart = stream.GetU32(buffer);
+        uint recoveryStart = stream.GetU32(buffer);
+        uint freeStart = stream.GetU32(buffer);
+        uint previewFrame = stream.GetU32(buffer);
+        uint baseStart = stream.GetU32(buffer);
+        uint dataSize = stream.GetU32(buffer);
         uint[] data = new uint[dataSize];
         for (int i = 0; i < dataSize; ++i)
         {
-            stream.ReadExactly(buffer[..4]);
-            data[i] = BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+            data[i] = stream.GetU32(buffer);
         }
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        stream.ReadExactly(buffer[..4]);
+        _ = stream.GetU32(buffer);
 
         AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
@@ -65,28 +55,19 @@ public class AnmAnimation
 
     internal void WriteTo(Stream stream, Span<byte> buffer)
     {
-        WriteString(stream, buffer, Name);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Frames.Length);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], LoopStart);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], RecoveryStart);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], FreeStart);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], PreviewFrame);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], BaseStart);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], (uint)Data.Length);
-        stream.Write(buffer[..4]);
+        stream.PutStr(buffer, Name);
+        stream.PutU32(buffer, (uint)Frames.Length);
+        stream.PutU32(buffer, LoopStart);
+        stream.PutU32(buffer, RecoveryStart);
+        stream.PutU32(buffer, FreeStart);
+        stream.PutU32(buffer, PreviewFrame);
+        stream.PutU32(buffer, BaseStart);
+        stream.PutU32(buffer, (uint)Data.Length);
         foreach (uint datum in Data)
         {
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], datum);
-            stream.Write(buffer[..4]);
+            stream.PutU32(buffer, datum);
         }
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], GetFramesByteCount());
-        stream.Write(buffer[..4]);
+        stream.PutU32(buffer, GetFramesByteCount());
         for (int i = 0; i < Frames.Length; ++i)
         {
             AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
@@ -103,23 +84,5 @@ public class AnmAnimation
             size += Frames[i].GetByteCount(prevFrame);
         }
         return size;
-    }
-
-    private static string ReadString(Stream stream, Span<byte> buffer)
-    {
-        stream.ReadExactly(buffer[..2]);
-        ushort stringLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        Span<byte> stringBuffer = stackalloc byte[stringLength];
-        stream.ReadExactly(stringBuffer);
-        return Encoding.UTF8.GetString(stringBuffer);
-    }
-
-    private static void WriteString(Stream stream, Span<byte> buffer, string str)
-    {
-        byte[] bytes = Encoding.UTF8.GetBytes(str);
-        ushort len = (ushort)bytes.Length;
-        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], len);
-        stream.Write(buffer[..2]);
-        stream.Write(bytes);
     }
 }

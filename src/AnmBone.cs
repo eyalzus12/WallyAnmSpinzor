@@ -1,12 +1,11 @@
 using System;
-using System.Buffers.Binary;
 using System.IO;
 
 namespace WallyAnmSpinzor;
 
 public sealed class AnmBone
 {
-    public required ushort Id { get; set; }
+    public required short Id { get; set; }
     public required float ScaleX { get; set; }
     public required float RotateSkew0 { get; set; }
     public required float RotateSkew1 { get; set; }
@@ -18,17 +17,13 @@ public sealed class AnmBone
 
     internal static AnmBone CreateFrom(Stream stream, Span<byte> buffer)
     {
-        stream.ReadExactly(buffer[..2]);
-        ushort id = BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
-        stream.ReadExactly(buffer[..1]);
-        bool opaque = buffer[0] != 0;
+        short id = stream.GetI16(buffer);
+        bool opaque = stream.GetB();
         bool identity = false;
         bool symmetric = false;
-        stream.ReadExactly(buffer[..1]);
-        if (buffer[0] != 0)
+        if (stream.GetB())
         {
-            stream.ReadExactly(buffer[..1]);
-            if (buffer[0] != 0) identity = true;
+            if (stream.GetB()) identity = true;
             else symmetric = true;
         }
 
@@ -40,10 +35,8 @@ public sealed class AnmBone
         }
         else
         {
-            stream.ReadExactly(buffer[..4]);
-            scaleX = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
-            stream.ReadExactly(buffer[..4]);
-            rotateSkew0 = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+            scaleX = stream.GetF32(buffer);
+            rotateSkew0 = stream.GetF32(buffer);
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -51,23 +44,17 @@ public sealed class AnmBone
             }
             else
             {
-                stream.ReadExactly(buffer[..4]);
-                rotateSkew1 = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
-                stream.ReadExactly(buffer[..4]);
-                scaleY = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+                rotateSkew1 = stream.GetF32(buffer);
+                scaleY = stream.GetF32(buffer);
             }
         }
-        stream.ReadExactly(buffer[..4]);
-        float x = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..4]);
-        float y = BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
-        stream.ReadExactly(buffer[..2]);
-        short frame = BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
+        float x = stream.GetF32(buffer);
+        float y = stream.GetF32(buffer);
+        short frame = stream.GetI16(buffer);
         double opacity = 1.0;
         if (!opaque)
         {
-            stream.ReadExactly(buffer[..1]);
-            opacity = buffer[0] / 255.0;
+            opacity = stream.GetU8() / 255.0;
         }
 
         return new()
@@ -86,49 +73,39 @@ public sealed class AnmBone
 
     internal void WriteTo(Stream stream, Span<byte> buffer)
     {
-        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], Id);
-        stream.Write(buffer[..2]);
-
-        if (Opacity == 1) stream.WriteByte(1);
-        else stream.WriteByte(0);
+        stream.PutI16(buffer, Id);
+        stream.PutB(Opacity == 1);
 
         bool identity = IsIdentity;
         bool symmetric = IsSymmetric;
         if (identity || symmetric)
         {
-            stream.WriteByte(1);
-            if (identity) stream.WriteByte(1);
-            else stream.WriteByte(0);
+            stream.PutB(true);
+            if (identity) stream.PutB(true);
+            else stream.PutB(false);
         }
         else
         {
-            stream.WriteByte(0);
+            stream.PutB(false);
         }
 
         if (!identity)
         {
-            BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], ScaleX);
-            stream.Write(buffer[..4]);
-            BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], RotateSkew0);
-            stream.Write(buffer[..4]);
+            stream.PutF32(buffer, ScaleX);
+            stream.PutF32(buffer, RotateSkew0);
             if (!symmetric)
             {
-                BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], RotateSkew1);
-                stream.Write(buffer[..4]);
-                BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], ScaleY);
-                stream.Write(buffer[..4]);
+                stream.PutF32(buffer, RotateSkew1);
+                stream.PutF32(buffer, ScaleY);
             }
         }
-        BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], X);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], Y);
-        stream.Write(buffer[..4]);
-        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], Frame);
-        stream.Write(buffer[..2]);
+        stream.PutF32(buffer, X);
+        stream.PutF32(buffer, Y);
+        stream.PutI16(buffer, Frame);
         if (Opacity != 1)
         {
             byte opacity = (byte)Math.Round(Opacity * 255);
-            stream.WriteByte(opacity);
+            stream.PutU8(opacity);
         }
     }
 
