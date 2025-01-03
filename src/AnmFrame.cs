@@ -48,7 +48,7 @@ public sealed class AnmFrame
             {
                 if (prev is null)
                     throw new Exception("Bone duplication in first animation frame");
-                if (prev.Bones.Length >= i)
+                if (i >= prev.Bones.Length)
                     throw new Exception("Bone duplication without matching bone in previous frame");
                 bones[i] = prev.Bones[i].Clone();
                 if (!stream.GetB())
