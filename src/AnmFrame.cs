@@ -5,42 +5,34 @@ namespace WallyAnmSpinzor;
 
 public sealed class AnmFrame
 {
-    // making this a struct is more memory expensive
-    public sealed class Offset
-    {
-        public required double X { get; set; }
-        public required double Y { get; set; }
-    }
-
     public required short Id { get; set; }
-    public required Offset? OffsetA { get; set; }
-    public required Offset? OffsetB { get; set; }
-    public required double Rotation { get; set; }
+    public required (double X, double Y)? FireSocket { get; set; }
+    public required (double X, double Y)? EBPlatformPos { get; set; } // unused
+    public required double EBPlatformRot { get; set; } // unused
     public required AnmBone[] Bones { get; set; }
 
-    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev, Span<byte> buffer)
+    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev)
     {
-        short id = stream.GetI16(buffer);
+        short id = stream.GetI16();
 
-        Offset? offsetA = null;
+        (double x, double y)? fireSocket = null;
         if (stream.GetB())
         {
-            double x = stream.GetF64(buffer);
-            double y = stream.GetF64(buffer);
-            offsetA = new() { X = x, Y = y, };
+            double x = stream.GetF64();
+            double y = stream.GetF64();
+            fireSocket = (x, y);
         }
 
-        Offset? offsetB = null;
+        (double x, double y)? ebPlatformPos = null;
         if (stream.GetB())
         {
-            double x = stream.GetF64(buffer);
-            double y = stream.GetF64(buffer);
-            offsetB = new() { X = x, Y = y, };
+            double x = stream.GetF64();
+            double y = stream.GetF64();
+            ebPlatformPos = (x, y);
         }
+        double ebPlatformRot = stream.GetF64();
 
-        double rotation = stream.GetF64(buffer);
-        short bonesCount = stream.GetI16(buffer);
-
+        short bonesCount = stream.GetI16();
         AnmBone[] bones = new AnmBone[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
@@ -52,52 +44,52 @@ public sealed class AnmFrame
                     throw new Exception("Bone duplication without matching bone in previous frame");
                 bones[i] = prev.Bones[i].Clone();
                 if (!stream.GetB())
-                    bones[i].Frame = stream.GetI16(buffer);
+                    bones[i].Frame = stream.GetI16();
             }
             else
             {
-                bones[i] = AnmBone.CreateFrom(stream, buffer);
+                bones[i] = AnmBone.CreateFrom(stream);
             }
         }
 
         return new()
         {
             Id = id,
-            OffsetA = offsetA,
-            OffsetB = offsetB,
-            Rotation = rotation,
+            FireSocket = fireSocket,
+            EBPlatformPos = ebPlatformPos,
+            EBPlatformRot = ebPlatformRot,
             Bones = bones,
         };
     }
 
-    internal void WriteTo(Stream stream, Span<byte> buffer, AnmFrame? prevFrame)
+    internal void WriteTo(Stream stream, AnmFrame? prevFrame)
     {
-        stream.PutI16(buffer, Id);
+        stream.PutI16(Id);
 
-        if (OffsetA is null)
+        if (FireSocket is null)
         {
             stream.PutB(false);
         }
         else
         {
             stream.PutB(true);
-            stream.PutF64(buffer, OffsetA.X);
-            stream.PutF64(buffer, OffsetA.Y);
+            stream.PutF64(FireSocket.Value.X);
+            stream.PutF64(FireSocket.Value.Y);
         }
 
-        if (OffsetB is null)
+        if (EBPlatformPos is null)
         {
             stream.PutB(false);
         }
         else
         {
             stream.PutB(true);
-            stream.PutF64(buffer, OffsetB.X);
-            stream.PutF64(buffer, OffsetB.Y);
+            stream.PutF64(EBPlatformPos.Value.X);
+            stream.PutF64(EBPlatformPos.Value.Y);
         }
 
-        stream.PutF64(buffer, Rotation);
-        stream.PutI16(buffer, (short)Bones.Length);
+        stream.PutF64(EBPlatformRot);
+        stream.PutI16((short)Bones.Length);
         for (int i = 0; i < Bones.Length; ++i)
         {
             if (prevFrame is not null && i < prevFrame.Bones.Length && Bones[i].IsPartialCloneOf(prevFrame.Bones[i]))
@@ -110,13 +102,13 @@ public sealed class AnmFrame
                 else
                 {
                     stream.PutB(false);
-                    stream.PutI16(buffer, Bones[i].Frame);
+                    stream.PutI16(Bones[i].Frame);
                 }
             }
             else
             {
                 stream.PutB(false);
-                Bones[i].WriteTo(stream, buffer);
+                Bones[i].WriteTo(stream);
             }
         }
     }
@@ -125,13 +117,13 @@ public sealed class AnmFrame
     {
         uint size = 0;
         size += sizeof(short); // id
-        size += sizeof(byte); // OffsetA indicator
-        if (OffsetA is not null)
-            size += 2 * sizeof(double); // OffsetA
-        size += sizeof(byte); // OffsetB indicator
-        if (OffsetB is not null)
-            size += 2 * sizeof(double); // OffsetB
-        size += sizeof(double); // Rotation
+        size += sizeof(byte); // FireSocket indicator
+        if (FireSocket is not null)
+            size += 2 * sizeof(double); // FireSocket
+        size += sizeof(byte); // EB_Platform indicator
+        if (EBPlatformPos is not null)
+            size += 2 * sizeof(double); // EB_Platform position
+        size += sizeof(double); // EB_Platform rotation
         size += sizeof(short); // bone count
         for (int i = 0; i < Bones.Length; ++i)
         {

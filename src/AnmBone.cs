@@ -15,9 +15,9 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone CreateFrom(Stream stream, Span<byte> buffer)
+    internal static AnmBone CreateFrom(Stream stream)
     {
-        short id = stream.GetI16(buffer);
+        short id = stream.GetI16();
         bool opaque = stream.GetB();
         bool identity = false;
         bool symmetric = false;
@@ -35,8 +35,8 @@ public sealed class AnmBone
         }
         else
         {
-            scaleX = stream.GetF32(buffer);
-            rotateSkew0 = stream.GetF32(buffer);
+            scaleX = stream.GetF32();
+            rotateSkew0 = stream.GetF32();
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -44,13 +44,13 @@ public sealed class AnmBone
             }
             else
             {
-                rotateSkew1 = stream.GetF32(buffer);
-                scaleY = stream.GetF32(buffer);
+                rotateSkew1 = stream.GetF32();
+                scaleY = stream.GetF32();
             }
         }
-        float x = stream.GetF32(buffer);
-        float y = stream.GetF32(buffer);
-        short frame = stream.GetI16(buffer);
+        float x = stream.GetF32();
+        float y = stream.GetF32();
+        short frame = stream.GetI16();
         double opacity = 1.0;
         if (!opaque)
         {
@@ -71,9 +71,9 @@ public sealed class AnmBone
         };
     }
 
-    internal void WriteTo(Stream stream, Span<byte> buffer)
+    internal void WriteTo(Stream stream)
     {
-        stream.PutI16(buffer, Id);
+        stream.PutI16(Id);
         stream.PutB(Opacity == 1);
 
         bool identity = IsIdentity;
@@ -91,17 +91,17 @@ public sealed class AnmBone
 
         if (!identity)
         {
-            stream.PutF32(buffer, ScaleX);
-            stream.PutF32(buffer, RotateSkew0);
+            stream.PutF32(ScaleX);
+            stream.PutF32(RotateSkew0);
             if (!symmetric)
             {
-                stream.PutF32(buffer, RotateSkew1);
-                stream.PutF32(buffer, ScaleY);
+                stream.PutF32(RotateSkew1);
+                stream.PutF32(ScaleY);
             }
         }
-        stream.PutF32(buffer, X);
-        stream.PutF32(buffer, Y);
-        stream.PutI16(buffer, Frame);
+        stream.PutF32(X);
+        stream.PutF32(Y);
+        stream.PutI16(Frame);
         if (Opacity != 1)
         {
             byte opacity = (byte)Math.Round(Opacity * 255);

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -10,16 +9,16 @@ public class AnmClass
     public required string FileName { get; set; }
     public required Dictionary<string, AnmAnimation> Animations { get; set; }
 
-    internal static AnmClass CreateFrom(Stream stream, Span<byte> buffer)
+    internal static AnmClass CreateFrom(Stream stream)
     {
-        string index = stream.GetStr(buffer);
-        string fileName = stream.GetStr(buffer);
+        string index = stream.GetStr();
+        string fileName = stream.GetStr();
 
-        uint animationCount = stream.GetU32(buffer);
+        uint animationCount = stream.GetU32();
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
         for (int i = 0; i < animationCount; ++i)
         {
-            AnmAnimation animation = AnmAnimation.CreateFrom(stream, buffer);
+            AnmAnimation animation = AnmAnimation.CreateFrom(stream);
             animations[animation.Name] = animation;
         }
 
@@ -31,14 +30,14 @@ public class AnmClass
         };
     }
 
-    internal void WriteTo(Stream stream, Span<byte> buffer)
+    internal void WriteTo(Stream stream)
     {
-        stream.PutStr(buffer, Index);
-        stream.PutStr(buffer, FileName);
-        stream.PutU32(buffer, (uint)Animations.Count);
+        stream.PutStr(Index);
+        stream.PutStr(FileName);
+        stream.PutU32((uint)Animations.Count);
         foreach ((_, AnmAnimation animation) in Animations)
         {
-            animation.WriteTo(stream, buffer);
+            animation.WriteTo(stream);
         }
     }
 }

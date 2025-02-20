@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -12,28 +11,25 @@ public class AnmFile
 
     public static AnmFile CreateFrom(Stream stream, bool leaveOpen = false)
     {
-        // needs to be 8 bytes for AnmFrame
-        Span<byte> buffer = stackalloc byte[8];
-        int header = stream.GetI32(buffer);
+        int header = stream.GetI32();
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        return CreateFrom(decompressedStream, header, buffer);
+        return CreateFrom(decompressedStream, header);
     }
 
     public void WriteTo(Stream stream, bool leaveOpen = false)
     {
-        Span<byte> buffer = stackalloc byte[8];
-        stream.PutI32(buffer, Header);
+        stream.PutI32(Header);
         using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
-        WriteTo(compressedStream, buffer);
+        WriteTo(compressedStream);
     }
 
-    internal static AnmFile CreateFrom(Stream stream, int header, Span<byte> buffer)
+    internal static AnmFile CreateFrom(Stream stream, int header)
     {
         Dictionary<string, AnmClass> classes = [];
         while (stream.GetB())
         {
-            string key = stream.GetStr(buffer);
-            AnmClass @class = AnmClass.CreateFrom(stream, buffer);
+            string key = stream.GetStr();
+            AnmClass @class = AnmClass.CreateFrom(stream);
             classes[key] = @class;
         }
 
@@ -44,13 +40,13 @@ public class AnmFile
         };
     }
 
-    internal void WriteTo(Stream stream, Span<byte> buffer)
+    internal void WriteTo(Stream stream)
     {
         foreach ((string key, AnmClass @class) in Classes)
         {
             stream.PutB(true);
-            stream.PutStr(buffer, key);
-            @class.WriteTo(stream, buffer);
+            stream.PutStr(key);
+            @class.WriteTo(stream);
         }
         stream.PutB(false);
     }

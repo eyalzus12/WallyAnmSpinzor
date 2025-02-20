@@ -1,10 +1,12 @@
 using System;
 using System.Buffers.Binary;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace WallyAnmSpinzor;
 
+[SkipLocalsInit]
 internal static class AnmUtils
 {
     internal static bool GetB(this Stream stream) => GetU8(stream) != 0;
@@ -16,46 +18,55 @@ internal static class AnmUtils
         return (byte)@byte;
     }
 
-    internal static ushort GetU16(this Stream stream, Span<byte> buffer)
+    internal static ushort GetU16(this Stream stream)
     {
-        stream.ReadExactly(buffer[..2]);
-        return BinaryPrimitives.ReadUInt16LittleEndian(buffer[..2]);
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt16LittleEndian(buffer);
     }
 
-    internal static uint GetU32(this Stream stream, Span<byte> buffer)
+    internal static uint GetU32(this Stream stream)
     {
-        stream.ReadExactly(buffer[..4]);
-        return BinaryPrimitives.ReadUInt32LittleEndian(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadUInt32LittleEndian(buffer);
     }
 
-    internal static short GetI16(this Stream stream, Span<byte> buffer)
+    internal static short GetI16(this Stream stream)
     {
-        stream.ReadExactly(buffer[..2]);
-        return BinaryPrimitives.ReadInt16LittleEndian(buffer[..2]);
+        Span<byte> buffer = stackalloc byte[2];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadInt16LittleEndian(buffer);
     }
 
-    internal static int GetI32(this Stream stream, Span<byte> buffer)
+    internal static int GetI32(this Stream stream)
     {
-        stream.ReadExactly(buffer[..4]);
-        return BinaryPrimitives.ReadInt32LittleEndian(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadInt32LittleEndian(buffer);
     }
 
-    internal static float GetF32(this Stream stream, Span<byte> buffer)
+    internal static float GetF32(this Stream stream)
     {
-        stream.ReadExactly(buffer[..4]);
-        return BinaryPrimitives.ReadSingleLittleEndian(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadSingleLittleEndian(buffer);
     }
 
-    internal static double GetF64(this Stream stream, Span<byte> buffer)
+    internal static double GetF64(this Stream stream)
     {
-        stream.ReadExactly(buffer[..8]);
-        return BinaryPrimitives.ReadDoubleLittleEndian(buffer[..8]);
+        Span<byte> buffer = stackalloc byte[8];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadDoubleLittleEndian(buffer);
     }
 
-    internal static string GetStr(this Stream stream, Span<byte> buffer)
+    internal static string GetStr(this Stream stream)
     {
-        ushort stringLength = GetU16(stream, buffer);
-        Span<byte> stringBuffer = stackalloc byte[stringLength];
+        ushort stringLength = GetU16(stream);
+        Span<byte> stringBuffer = stringLength > 1024
+            ? GC.AllocateUninitializedArray<byte>(stringLength)
+            : (stackalloc byte[1024])[..stringLength];
+
         stream.ReadExactly(stringBuffer);
         return Encoding.UTF8.GetString(stringBuffer);
     }
@@ -67,47 +78,53 @@ internal static class AnmUtils
         stream.WriteByte(u8);
     }
 
-    internal static void PutU16(this Stream stream, Span<byte> buffer, ushort u16)
+    internal static void PutU16(this Stream stream, ushort u16)
     {
-        BinaryPrimitives.WriteUInt16LittleEndian(buffer[..2], u16);
-        stream.Write(buffer[..2]);
+        Span<byte> buffer = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer, u16);
+        stream.Write(buffer);
     }
 
-    internal static void PutU32(this Stream stream, Span<byte> buffer, uint u32)
+    internal static void PutU32(this Stream stream, uint u32)
     {
-        BinaryPrimitives.WriteUInt32LittleEndian(buffer[..4], u32);
-        stream.Write(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer, u32);
+        stream.Write(buffer);
     }
 
-    internal static void PutI16(this Stream stream, Span<byte> buffer, short i16)
+    internal static void PutI16(this Stream stream, short i16)
     {
-        BinaryPrimitives.WriteInt16LittleEndian(buffer[..2], i16);
-        stream.Write(buffer[..2]);
+        Span<byte> buffer = stackalloc byte[2];
+        BinaryPrimitives.WriteInt16LittleEndian(buffer, i16);
+        stream.Write(buffer);
     }
 
-    internal static void PutI32(this Stream stream, Span<byte> buffer, int i32)
+    internal static void PutI32(this Stream stream, int i32)
     {
-        BinaryPrimitives.WriteInt32LittleEndian(buffer[..4], i32);
-        stream.Write(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer, i32);
+        stream.Write(buffer);
     }
 
-    internal static void PutF32(this Stream stream, Span<byte> buffer, float f32)
+    internal static void PutF32(this Stream stream, float f32)
     {
-        BinaryPrimitives.WriteSingleLittleEndian(buffer[..4], f32);
-        stream.Write(buffer[..4]);
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteSingleLittleEndian(buffer, f32);
+        stream.Write(buffer);
     }
 
-    internal static void PutF64(this Stream stream, Span<byte> buffer, double f64)
+    internal static void PutF64(this Stream stream, double f64)
     {
-        BinaryPrimitives.WriteDoubleLittleEndian(buffer[..8], f64);
-        stream.Write(buffer[..8]);
+        Span<byte> buffer = stackalloc byte[8];
+        BinaryPrimitives.WriteDoubleLittleEndian(buffer, f64);
+        stream.Write(buffer);
     }
 
-    internal static void PutStr(this Stream stream, Span<byte> buffer, string str)
+    internal static void PutStr(this Stream stream, string str)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(str);
         ushort len = (ushort)bytes.Length;
-        stream.PutU16(buffer, len);
+        stream.PutU16(len);
         stream.Write(bytes);
     }
 }
