@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace WallyAnmSpinzor;
 
@@ -71,6 +73,62 @@ public sealed class AnmBone
         };
     }
 
+    internal static async Task<AnmBone> CreateFromAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    {
+        short id = await stream.GetI16Async(buffer, ctoken);
+        bool opaque = await stream.GetBAsync(buffer, ctoken);
+        bool identity = false;
+        bool symmetric = false;
+        if (await stream.GetBAsync(buffer, ctoken))
+        {
+            if (await stream.GetBAsync(buffer, ctoken)) identity = true;
+            else symmetric = true;
+        }
+
+        float scaleX, rotateSkew0, rotateSkew1, scaleY;
+        if (identity)
+        {
+            scaleX = scaleY = 1;
+            rotateSkew0 = rotateSkew1 = 0;
+        }
+        else
+        {
+            scaleX = await stream.GetF32Async(buffer, ctoken);
+            rotateSkew0 = await stream.GetF32Async(buffer, ctoken);
+            if (symmetric)
+            {
+                rotateSkew1 = rotateSkew0;
+                scaleY = -scaleX;
+            }
+            else
+            {
+                rotateSkew1 = await stream.GetF32Async(buffer, ctoken);
+                scaleY = await stream.GetF32Async(buffer, ctoken);
+            }
+        }
+        float x = await stream.GetF32Async(buffer, ctoken);
+        float y = await stream.GetF32Async(buffer, ctoken);
+        short frame = await stream.GetI16Async(buffer, ctoken);
+        double opacity = 1.0;
+        if (!opaque)
+        {
+            opacity = await stream.GetU8Async(buffer, ctoken) / 255.0;
+        }
+
+        return new()
+        {
+            Id = id,
+            ScaleX = scaleX,
+            RotateSkew0 = rotateSkew0,
+            RotateSkew1 = rotateSkew1,
+            ScaleY = scaleY,
+            X = x,
+            Y = y,
+            Opacity = opacity,
+            Frame = frame,
+        };
+    }
+
     internal void WriteTo(Stream stream)
     {
         stream.PutI16(Id);
@@ -81,8 +139,7 @@ public sealed class AnmBone
         if (identity || symmetric)
         {
             stream.PutB(true);
-            if (identity) stream.PutB(true);
-            else stream.PutB(false);
+            stream.PutB(identity);
         }
         else
         {
@@ -106,6 +163,43 @@ public sealed class AnmBone
         {
             byte opacity = (byte)Math.Round(Opacity * 255);
             stream.PutU8(opacity);
+        }
+    }
+
+    internal async Task WriteToAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    {
+        await stream.PutI16Async(Id, buffer, ctoken);
+        await stream.PutBAsync(Opacity == 1, buffer, ctoken);
+
+        bool identity = IsIdentity;
+        bool symmetric = IsSymmetric;
+        if (identity || symmetric)
+        {
+            await stream.PutBAsync(true, buffer, ctoken);
+            await stream.PutBAsync(identity, buffer, ctoken);
+        }
+        else
+        {
+            await stream.PutBAsync(false, buffer, ctoken);
+        }
+
+        if (!identity)
+        {
+            await stream.PutF32Async(ScaleX, buffer, ctoken);
+            await stream.PutF32Async(RotateSkew0, buffer, ctoken);
+            if (!symmetric)
+            {
+                await stream.PutF32Async(RotateSkew1, buffer, ctoken);
+                await stream.PutF32Async(ScaleY, buffer, ctoken);
+            }
+        }
+        await stream.PutF32Async(X, buffer, ctoken);
+        await stream.PutF32Async(Y, buffer, ctoken);
+        await stream.PutI16Async(Frame, buffer, ctoken);
+        if (Opacity != 1)
+        {
+            byte opacity = (byte)Math.Round(Opacity * 255);
+            await stream.PutU8Async(opacity, buffer, ctoken);
         }
     }
 

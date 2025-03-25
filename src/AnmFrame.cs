@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace WallyAnmSpinzor;
 
@@ -62,6 +64,57 @@ public sealed class AnmFrame
         };
     }
 
+    internal static async Task<AnmFrame> CreateFromAsync(Stream stream, AnmFrame? prev, Memory<byte> buffer, CancellationToken ctoken = default)
+    {
+        short id = await stream.GetI16Async(buffer, ctoken);
+
+        (double x, double y)? fireSocket = null;
+        if (await stream.GetBAsync(buffer, ctoken))
+        {
+            double x = await stream.GetF64Async(buffer, ctoken);
+            double y = await stream.GetF64Async(buffer, ctoken);
+            fireSocket = (x, y);
+        }
+
+        (double x, double y)? ebPlatformPos = null;
+        if (await stream.GetBAsync(buffer, ctoken))
+        {
+            double x = await stream.GetF64Async(buffer, ctoken);
+            double y = await stream.GetF64Async(buffer, ctoken);
+            ebPlatformPos = (x, y);
+        }
+        double ebPlatformRot = await stream.GetF64Async(buffer, ctoken);
+
+        short bonesCount = await stream.GetI16Async(buffer, ctoken);
+        AnmBone[] bones = new AnmBone[bonesCount];
+        for (int i = 0; i < bonesCount; ++i)
+        {
+            if (await stream.GetBAsync(buffer, ctoken))
+            {
+                if (prev is null)
+                    throw new Exception("Bone duplication in first animation frame");
+                if (i >= prev.Bones.Length)
+                    throw new Exception("Bone duplication without matching bone in previous frame");
+                bones[i] = prev.Bones[i].Clone();
+                if (!await stream.GetBAsync(buffer, ctoken))
+                    bones[i].Frame = await stream.GetI16Async(buffer, ctoken);
+            }
+            else
+            {
+                bones[i] = await AnmBone.CreateFromAsync(stream, buffer, ctoken);
+            }
+        }
+
+        return new()
+        {
+            Id = id,
+            FireSocket = fireSocket,
+            EBPlatformPos = ebPlatformPos,
+            EBPlatformRot = ebPlatformRot,
+            Bones = bones,
+        };
+    }
+
     internal void WriteTo(Stream stream, AnmFrame? prevFrame)
     {
         stream.PutI16(Id);
@@ -109,6 +162,57 @@ public sealed class AnmFrame
             {
                 stream.PutB(false);
                 Bones[i].WriteTo(stream);
+            }
+        }
+    }
+
+    internal async Task WriteToAsync(Stream stream, AnmFrame? prevFrame, Memory<byte> buffer, CancellationToken ctoken = default)
+    {
+        await stream.PutI16Async(Id, buffer, ctoken);
+
+        if (FireSocket is null)
+        {
+            await stream.PutBAsync(false, buffer, ctoken);
+        }
+        else
+        {
+            await stream.PutBAsync(true, buffer, ctoken);
+            await stream.PutF64Async(FireSocket.Value.X, buffer, ctoken);
+            await stream.PutF64Async(FireSocket.Value.Y, buffer, ctoken);
+        }
+
+        if (EBPlatformPos is null)
+        {
+            await stream.PutBAsync(false, buffer, ctoken);
+        }
+        else
+        {
+            await stream.PutBAsync(true, buffer, ctoken);
+            await stream.PutF64Async(EBPlatformPos.Value.X, buffer, ctoken);
+            await stream.PutF64Async(EBPlatformPos.Value.Y, buffer, ctoken);
+        }
+
+        await stream.PutF64Async(EBPlatformRot, buffer, ctoken);
+        await stream.PutI16Async((short)Bones.Length, buffer, ctoken);
+        for (int i = 0; i < Bones.Length; ++i)
+        {
+            if (prevFrame is not null && i < prevFrame.Bones.Length && Bones[i].IsPartialCloneOf(prevFrame.Bones[i]))
+            {
+                await stream.PutBAsync(true, buffer, ctoken);
+                if (Bones[i].Frame == prevFrame.Bones[i].Frame)
+                {
+                    await stream.PutBAsync(true, buffer, ctoken);
+                }
+                else
+                {
+                    await stream.PutBAsync(false, buffer, ctoken);
+                    await stream.PutI16Async(Bones[i].Frame, buffer, ctoken);
+                }
+            }
+            else
+            {
+                await stream.PutBAsync(false, buffer, ctoken);
+                await Bones[i].WriteToAsync(stream, buffer, ctoken);
             }
         }
     }
