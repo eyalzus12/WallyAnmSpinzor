@@ -19,7 +19,7 @@ public class AnmClass
 
         uint animationCount = stream.GetU32();
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
-        for (int i = 0; i < animationCount; ++i)
+        for (uint i = 0; i < animationCount; ++i)
         {
             AnmAnimation animation = AnmAnimation.CreateFrom(stream);
             animations[animation.Name] = animation;
@@ -33,16 +33,16 @@ public class AnmClass
         };
     }
 
-    internal static async Task<AnmClass> CreateFromAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal static async Task<AnmClass> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
     {
-        string index = await stream.GetStrAsync(buffer, ctoken);
-        string fileName = await stream.GetStrAsync(buffer, ctoken);
+        string index = await stream.GetStrAsync(ctoken);
+        string fileName = await stream.GetStrAsync(ctoken);
 
-        uint animationCount = await stream.GetU32Async(buffer, ctoken);
+        uint animationCount = await stream.GetU32Async(ctoken);
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
-        for (int i = 0; i < animationCount; ++i)
+        for (uint i = 0; i < animationCount; ++i)
         {
-            AnmAnimation animation = await AnmAnimation.CreateFromAsync(stream, buffer, ctoken);
+            AnmAnimation animation = await AnmAnimation.CreateFromAsync(stream, ctoken);
             animations[animation.Name] = animation;
         }
 
@@ -65,14 +65,14 @@ public class AnmClass
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
     {
-        await stream.PutStrAsync(Index, buffer, ctoken);
-        await stream.PutStrAsync(FileName, buffer, ctoken);
-        await stream.PutU32Async((uint)Animations.Count, buffer, ctoken);
+        await stream.PutStrAsync(Index, ctoken);
+        await stream.PutStrAsync(FileName, ctoken);
+        await stream.PutU32Async((uint)Animations.Count, ctoken);
         foreach ((_, AnmAnimation animation) in Animations)
         {
-            await animation.WriteToAsync(stream, buffer, ctoken);
+            await animation.WriteToAsync(stream, ctoken);
         }
     }
 }

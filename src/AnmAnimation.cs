@@ -54,29 +54,29 @@ public class AnmAnimation
         };
     }
 
-    internal static async Task<AnmAnimation> CreateFromAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal static async Task<AnmAnimation> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
     {
-        string name = await stream.GetStrAsync(buffer, ctoken);
-        uint frameCount = await stream.GetU32Async(buffer, ctoken);
-        uint loopStart = await stream.GetU32Async(buffer, ctoken);
-        uint recoveryStart = await stream.GetU32Async(buffer, ctoken);
-        uint freeStart = await stream.GetU32Async(buffer, ctoken);
-        uint previewFrame = await stream.GetU32Async(buffer, ctoken);
-        uint baseStart = await stream.GetU32Async(buffer, ctoken);
-        uint dataSize = await stream.GetU32Async(buffer, ctoken);
+        string name = await stream.GetStrAsync(ctoken);
+        uint frameCount = await stream.GetU32Async(ctoken);
+        uint loopStart = await stream.GetU32Async(ctoken);
+        uint recoveryStart = await stream.GetU32Async(ctoken);
+        uint freeStart = await stream.GetU32Async(ctoken);
+        uint previewFrame = await stream.GetU32Async(ctoken);
+        uint baseStart = await stream.GetU32Async(ctoken);
+        uint dataSize = await stream.GetU32Async(ctoken);
         uint[] data = new uint[dataSize];
         for (int i = 0; i < dataSize; ++i)
         {
-            data[i] = await stream.GetU32Async(buffer, ctoken);
+            data[i] = await stream.GetU32Async(ctoken);
         }
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        _ = await stream.GetU32Async(buffer, ctoken);
+        _ = await stream.GetU32Async(ctoken);
         AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
         {
             AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
-            frames[i] = await AnmFrame.CreateFromAsync(stream, prevFrame, buffer, ctoken);
+            frames[i] = await AnmFrame.CreateFromAsync(stream, prevFrame, ctoken);
         }
 
         return new()
@@ -114,25 +114,25 @@ public class AnmAnimation
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
     {
-        await stream.PutStrAsync(Name, buffer, ctoken);
-        await stream.PutU32Async((uint)Frames.Length, buffer, ctoken);
-        await stream.PutU32Async(LoopStart, buffer, ctoken);
-        await stream.PutU32Async(RecoveryStart, buffer, ctoken);
-        await stream.PutU32Async(FreeStart, buffer, ctoken);
-        await stream.PutU32Async(PreviewFrame, buffer, ctoken);
-        await stream.PutU32Async(BaseStart, buffer, ctoken);
-        await stream.PutU32Async((uint)Data.Length, buffer, ctoken);
+        await stream.PutStrAsync(Name, ctoken);
+        await stream.PutU32Async((uint)Frames.Length, ctoken);
+        await stream.PutU32Async(LoopStart, ctoken);
+        await stream.PutU32Async(RecoveryStart, ctoken);
+        await stream.PutU32Async(FreeStart, ctoken);
+        await stream.PutU32Async(PreviewFrame, ctoken);
+        await stream.PutU32Async(BaseStart, ctoken);
+        await stream.PutU32Async((uint)Data.Length, ctoken);
         foreach (uint datum in Data)
         {
-            await stream.PutU32Async(datum, buffer, ctoken);
+            await stream.PutU32Async(datum, ctoken);
         }
-        await stream.PutU32Async(GetFramesByteCount(), buffer, ctoken);
+        await stream.PutU32Async(GetFramesByteCount(), ctoken);
         for (int i = 0; i < Frames.Length; ++i)
         {
             AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
-            await Frames[i].WriteToAsync(stream, prevFrame, buffer, ctoken);
+            await Frames[i].WriteToAsync(stream, prevFrame, ctoken);
         }
     }
 

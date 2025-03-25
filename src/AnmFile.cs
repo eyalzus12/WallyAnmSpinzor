@@ -21,12 +21,9 @@ public class AnmFile
 
     public static async Task<AnmFile> CreateFromAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
     {
-        // 1024 for short strings
-        Memory<byte> buffer = GC.AllocateUninitializedArray<byte>(1024);
-
-        int header = await stream.GetI32Async(buffer, ctoken);
+        int header = await stream.GetI32Async(ctoken);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        return await CreateFromAsync(decompressedStream, header, buffer, ctoken);
+        return await CreateFromAsync(decompressedStream, header, ctoken);
     }
 
     public void WriteTo(Stream stream, bool leaveOpen = false)
@@ -38,12 +35,9 @@ public class AnmFile
 
     public async Task WriteToAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
     {
-        // 8 bytes for double
-        Memory<byte> buffer = GC.AllocateUninitializedArray<byte>(8);
-
-        await stream.PutI32Async(Header, buffer, ctoken);
+        await stream.PutI32Async(Header, ctoken);
         using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
-        await WriteToAsync(compressedStream, buffer, ctoken);
+        await WriteToAsync(compressedStream, ctoken);
     }
 
     internal static AnmFile CreateFrom(Stream stream, int header)
@@ -63,13 +57,13 @@ public class AnmFile
         };
     }
 
-    internal static async Task<AnmFile> CreateFromAsync(Stream stream, int header, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal static async Task<AnmFile> CreateFromAsync(Stream stream, int header, CancellationToken ctoken = default)
     {
         Dictionary<string, AnmClass> classes = [];
-        while (await stream.GetBAsync(buffer, ctoken))
+        while (await stream.GetBAsync(ctoken))
         {
-            string key = await stream.GetStrAsync(buffer, ctoken);
-            AnmClass @class = await AnmClass.CreateFromAsync(stream, buffer, ctoken);
+            string key = await stream.GetStrAsync(ctoken);
+            AnmClass @class = await AnmClass.CreateFromAsync(stream, ctoken);
             classes[key] = @class;
         }
 
@@ -91,14 +85,14 @@ public class AnmFile
         stream.PutB(false);
     }
 
-    internal async Task WriteToAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
     {
         foreach ((string key, AnmClass @class) in Classes)
         {
-            await stream.PutBAsync(true, buffer, ctoken);
-            await stream.PutStrAsync(key, buffer, ctoken);
-            await @class.WriteToAsync(stream, buffer, ctoken);
+            await stream.PutBAsync(true, ctoken);
+            await stream.PutStrAsync(key, ctoken);
+            await @class.WriteToAsync(stream, ctoken);
         }
-        await stream.PutBAsync(false, buffer, ctoken);
+        await stream.PutBAsync(false, ctoken);
     }
 }

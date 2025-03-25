@@ -73,15 +73,15 @@ public sealed class AnmBone
         };
     }
 
-    internal static async Task<AnmBone> CreateFromAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal static async Task<AnmBone> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
     {
-        short id = await stream.GetI16Async(buffer, ctoken);
-        bool opaque = await stream.GetBAsync(buffer, ctoken);
+        short id = await stream.GetI16Async(ctoken);
+        bool opaque = await stream.GetBAsync(ctoken);
         bool identity = false;
         bool symmetric = false;
-        if (await stream.GetBAsync(buffer, ctoken))
+        if (await stream.GetBAsync(ctoken))
         {
-            if (await stream.GetBAsync(buffer, ctoken)) identity = true;
+            if (await stream.GetBAsync(ctoken)) identity = true;
             else symmetric = true;
         }
 
@@ -93,8 +93,8 @@ public sealed class AnmBone
         }
         else
         {
-            scaleX = await stream.GetF32Async(buffer, ctoken);
-            rotateSkew0 = await stream.GetF32Async(buffer, ctoken);
+            scaleX = await stream.GetF32Async(ctoken);
+            rotateSkew0 = await stream.GetF32Async(ctoken);
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -102,17 +102,17 @@ public sealed class AnmBone
             }
             else
             {
-                rotateSkew1 = await stream.GetF32Async(buffer, ctoken);
-                scaleY = await stream.GetF32Async(buffer, ctoken);
+                rotateSkew1 = await stream.GetF32Async(ctoken);
+                scaleY = await stream.GetF32Async(ctoken);
             }
         }
-        float x = await stream.GetF32Async(buffer, ctoken);
-        float y = await stream.GetF32Async(buffer, ctoken);
-        short frame = await stream.GetI16Async(buffer, ctoken);
+        float x = await stream.GetF32Async(ctoken);
+        float y = await stream.GetF32Async(ctoken);
+        short frame = await stream.GetI16Async(ctoken);
         double opacity = 1.0;
         if (!opaque)
         {
-            opacity = await stream.GetU8Async(buffer, ctoken) / 255.0;
+            opacity = await stream.GetU8Async(ctoken) / 255.0;
         }
 
         return new()
@@ -166,40 +166,40 @@ public sealed class AnmBone
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, Memory<byte> buffer, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
     {
-        await stream.PutI16Async(Id, buffer, ctoken);
-        await stream.PutBAsync(Opacity == 1, buffer, ctoken);
+        await stream.PutI16Async(Id, ctoken);
+        await stream.PutBAsync(Opacity == 1, ctoken);
 
         bool identity = IsIdentity;
         bool symmetric = IsSymmetric;
         if (identity || symmetric)
         {
-            await stream.PutBAsync(true, buffer, ctoken);
-            await stream.PutBAsync(identity, buffer, ctoken);
+            await stream.PutBAsync(true, ctoken);
+            await stream.PutBAsync(identity, ctoken);
         }
         else
         {
-            await stream.PutBAsync(false, buffer, ctoken);
+            await stream.PutBAsync(false, ctoken);
         }
 
         if (!identity)
         {
-            await stream.PutF32Async(ScaleX, buffer, ctoken);
-            await stream.PutF32Async(RotateSkew0, buffer, ctoken);
+            await stream.PutF32Async(ScaleX, ctoken);
+            await stream.PutF32Async(RotateSkew0, ctoken);
             if (!symmetric)
             {
-                await stream.PutF32Async(RotateSkew1, buffer, ctoken);
-                await stream.PutF32Async(ScaleY, buffer, ctoken);
+                await stream.PutF32Async(RotateSkew1, ctoken);
+                await stream.PutF32Async(ScaleY, ctoken);
             }
         }
-        await stream.PutF32Async(X, buffer, ctoken);
-        await stream.PutF32Async(Y, buffer, ctoken);
-        await stream.PutI16Async(Frame, buffer, ctoken);
+        await stream.PutF32Async(X, ctoken);
+        await stream.PutF32Async(Y, ctoken);
+        await stream.PutI16Async(Frame, ctoken);
         if (Opacity != 1)
         {
             byte opacity = (byte)Math.Round(Opacity * 255);
-            await stream.PutU8Async(opacity, buffer, ctoken);
+            await stream.PutU8Async(opacity, ctoken);
         }
     }
 
