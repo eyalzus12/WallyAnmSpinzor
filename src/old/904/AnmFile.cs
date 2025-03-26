@@ -4,21 +4,21 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WallyAnmSpinzor;
+namespace WallyAnmSpinzor.Version_904;
 
-public class AnmFile
+public class AnmFile_904
 {
     public required int Header { get; set; }
-    public required Dictionary<string, AnmClass> Classes { get; set; }
+    public required Dictionary<string, AnmClass_904> Classes { get; set; }
 
-    public static AnmFile CreateFrom(Stream stream, bool leaveOpen = false)
+    public static AnmFile_904 CreateFrom(Stream stream, bool leaveOpen = false)
     {
         int header = stream.GetI32();
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
         return CreateFrom(decompressedStream, header);
     }
 
-    public static async Task<AnmFile> CreateFromAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
+    public static async Task<AnmFile_904> CreateFromAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
     {
         int header = await stream.GetI32Async(ctoken);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
@@ -39,13 +39,13 @@ public class AnmFile
         await WriteToAsync(compressedStream, ctoken);
     }
 
-    internal static AnmFile CreateFrom(Stream stream, int header)
+    internal static AnmFile_904 CreateFrom(Stream stream, int header)
     {
-        Dictionary<string, AnmClass> classes = [];
+        Dictionary<string, AnmClass_904> classes = [];
         while (stream.GetB())
         {
             string key = stream.GetStr();
-            AnmClass @class = AnmClass.CreateFrom(stream);
+            AnmClass_904 @class = AnmClass_904.CreateFrom(stream);
             classes[key] = @class;
         }
 
@@ -56,13 +56,13 @@ public class AnmFile
         };
     }
 
-    internal static async Task<AnmFile> CreateFromAsync(Stream stream, int header, CancellationToken ctoken = default)
+    internal static async Task<AnmFile_904> CreateFromAsync(Stream stream, int header, CancellationToken ctoken = default)
     {
-        Dictionary<string, AnmClass> classes = [];
+        Dictionary<string, AnmClass_904> classes = [];
         while (await stream.GetBAsync(ctoken))
         {
             string key = await stream.GetStrAsync(ctoken);
-            AnmClass @class = await AnmClass.CreateFromAsync(stream, ctoken);
+            AnmClass_904 @class = await AnmClass_904.CreateFromAsync(stream, ctoken);
             classes[key] = @class;
         }
 
@@ -75,7 +75,7 @@ public class AnmFile
 
     internal void WriteTo(Stream stream)
     {
-        foreach ((string key, AnmClass @class) in Classes)
+        foreach ((string key, AnmClass_904 @class) in Classes)
         {
             stream.PutB(true);
             stream.PutStr(key);
@@ -86,7 +86,7 @@ public class AnmFile
 
     internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
     {
-        foreach ((string key, AnmClass @class) in Classes)
+        foreach ((string key, AnmClass_904 @class) in Classes)
         {
             await stream.PutBAsync(true, ctoken);
             await stream.PutStrAsync(key, ctoken);

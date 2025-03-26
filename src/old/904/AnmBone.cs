@@ -3,9 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WallyAnmSpinzor;
+namespace WallyAnmSpinzor.Version_904;
 
-public sealed class AnmBone
+public sealed class AnmBone_904
 {
     public required short Id { get; set; }
     public required float ScaleX { get; set; }
@@ -17,7 +17,7 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone CreateFrom(Stream stream)
+    internal static AnmBone_904 CreateFrom(Stream stream)
     {
         short id = stream.GetI16();
         bool opaque = stream.GetB();
@@ -73,7 +73,7 @@ public sealed class AnmBone
         };
     }
 
-    internal static async Task<AnmBone> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmBone_904> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
     {
         short id = await stream.GetI16Async(ctoken);
         bool opaque = await stream.GetBAsync(ctoken);
@@ -237,7 +237,7 @@ public sealed class AnmBone
         return size;
     }
 
-    internal AnmBone Clone() => new()
+    internal AnmBone_904 Clone() => new()
     {
         Id = Id,
         ScaleX = ScaleX,
@@ -250,7 +250,7 @@ public sealed class AnmBone
         Frame = Frame,
     };
 
-    internal bool IsPartialCloneOf(AnmBone bone) =>
+    internal bool IsPartialCloneOf(AnmBone_904 bone) =>
         Id == bone.Id &&
         ScaleX == bone.ScaleX &&
         RotateSkew0 == bone.RotateSkew0 &&

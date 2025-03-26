@@ -3,17 +3,17 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WallyAnmSpinzor;
+namespace WallyAnmSpinzor.Version_904;
 
-public sealed class AnmFrame
+public sealed class AnmFrame_904
 {
     public required short Id { get; set; }
     public required (double X, double Y)? FireSocket { get; set; }
     public required (double X, double Y)? EBPlatformPos { get; set; } // unused
     public required double EBPlatformRot { get; set; } // unused
-    public required AnmBone[] Bones { get; set; }
+    public required AnmBone_904[] Bones { get; set; }
 
-    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev)
+    internal static AnmFrame_904 CreateFrom(Stream stream, AnmFrame_904? prev)
     {
         short id = stream.GetI16();
 
@@ -35,7 +35,7 @@ public sealed class AnmFrame
         double ebPlatformRot = stream.GetF64();
 
         short bonesCount = stream.GetI16();
-        AnmBone[] bones = new AnmBone[bonesCount];
+        AnmBone_904[] bones = new AnmBone_904[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
             if (stream.GetB())
@@ -50,7 +50,7 @@ public sealed class AnmFrame
             }
             else
             {
-                bones[i] = AnmBone.CreateFrom(stream);
+                bones[i] = AnmBone_904.CreateFrom(stream);
             }
         }
 
@@ -64,7 +64,7 @@ public sealed class AnmFrame
         };
     }
 
-    internal static async Task<AnmFrame> CreateFromAsync(Stream stream, AnmFrame? prev, CancellationToken ctoken = default)
+    internal static async Task<AnmFrame_904> CreateFromAsync(Stream stream, AnmFrame_904? prev, CancellationToken ctoken = default)
     {
         short id = await stream.GetI16Async(ctoken);
 
@@ -86,7 +86,7 @@ public sealed class AnmFrame
         double ebPlatformRot = await stream.GetF64Async(ctoken);
 
         short bonesCount = await stream.GetI16Async(ctoken);
-        AnmBone[] bones = new AnmBone[bonesCount];
+        AnmBone_904[] bones = new AnmBone_904[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
             if (await stream.GetBAsync(ctoken))
@@ -101,7 +101,7 @@ public sealed class AnmFrame
             }
             else
             {
-                bones[i] = await AnmBone.CreateFromAsync(stream, ctoken);
+                bones[i] = await AnmBone_904.CreateFromAsync(stream, ctoken);
             }
         }
 
@@ -115,7 +115,7 @@ public sealed class AnmFrame
         };
     }
 
-    internal void WriteTo(Stream stream, AnmFrame? prevFrame)
+    internal void WriteTo(Stream stream, AnmFrame_904? prevFrame)
     {
         stream.PutI16(Id);
 
@@ -166,7 +166,7 @@ public sealed class AnmFrame
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, AnmFrame? prevFrame, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(Stream stream, AnmFrame_904? prevFrame, CancellationToken ctoken = default)
     {
         await stream.PutI16Async(Id, ctoken);
 
@@ -217,7 +217,7 @@ public sealed class AnmFrame
         }
     }
 
-    internal uint GetByteCount(AnmFrame? prevFrame)
+    internal uint GetByteCount(AnmFrame_904? prevFrame)
     {
         uint size = 0;
         size += sizeof(short); // id
