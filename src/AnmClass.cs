@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor;
 
@@ -11,16 +12,16 @@ public sealed class AnmClass
     public required string FileName { get; set; }
     public required Dictionary<string, AnmAnimation> Animations { get; set; }
 
-    internal static AnmClass CreateFrom(Stream stream)
+    internal static AnmClass CreateFrom(DataReader reader)
     {
-        string index = stream.GetStr();
-        string fileName = stream.GetStr();
+        string index = reader.ReadStr();
+        string fileName = reader.ReadStr();
 
-        uint animationCount = stream.GetU32();
+        uint animationCount = reader.ReadU32();
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
         for (uint i = 0; i < animationCount; ++i)
         {
-            AnmAnimation animation = AnmAnimation.CreateFrom(stream);
+            AnmAnimation animation = AnmAnimation.CreateFrom(reader);
             animations[animation.Name] = animation;
         }
 
@@ -32,16 +33,16 @@ public sealed class AnmClass
         };
     }
 
-    internal static async Task<AnmClass> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmClass> CreateFromAsync(DataReader reader, CancellationToken ctoken = default)
     {
-        string index = await stream.GetStrAsync(ctoken);
-        string fileName = await stream.GetStrAsync(ctoken);
+        string index = await reader.ReadStrAsync(ctoken);
+        string fileName = await reader.ReadStrAsync(ctoken);
 
-        uint animationCount = await stream.GetU32Async(ctoken);
+        uint animationCount = await reader.ReadU32Async(ctoken);
         Dictionary<string, AnmAnimation> animations = new((int)animationCount);
         for (uint i = 0; i < animationCount; ++i)
         {
-            AnmAnimation animation = await AnmAnimation.CreateFromAsync(stream, ctoken);
+            AnmAnimation animation = await AnmAnimation.CreateFromAsync(reader, ctoken);
             animations[animation.Name] = animation;
         }
 

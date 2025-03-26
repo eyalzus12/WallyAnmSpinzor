@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor;
 
@@ -12,43 +13,43 @@ public sealed class AnmFrame
     public required (double X, double Y)? EBPlatformPos { get; set; } // unused
     public required AnmBone[] Bones { get; set; }
 
-    internal static AnmFrame CreateFrom(Stream stream, AnmFrame? prev)
+    internal static AnmFrame CreateFrom(DataReader reader, AnmFrame? prev)
     {
-        short id = stream.GetI16();
+        short id = reader.ReadI16();
 
         (double x, double y)? fireSocket = null;
-        if (stream.GetB())
+        if (reader.ReadBool())
         {
-            double x = stream.GetF64();
-            double y = stream.GetF64();
+            double x = reader.ReadF64();
+            double y = reader.ReadF64();
             fireSocket = (x, y);
         }
 
         (double x, double y)? ebPlatformPos = null;
-        if (stream.GetB())
+        if (reader.ReadBool())
         {
-            double x = stream.GetF64();
-            double y = stream.GetF64();
+            double x = reader.ReadF64();
+            double y = reader.ReadF64();
             ebPlatformPos = (x, y);
         }
 
-        short bonesCount = stream.GetI16();
+        short bonesCount = reader.ReadI16();
         AnmBone[] bones = new AnmBone[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
-            if (stream.GetB())
+            if (reader.ReadBool())
             {
                 if (prev is null)
                     throw new Exception("Bone duplication in first animation frame");
                 if (i >= prev.Bones.Length)
                     throw new Exception("Bone duplication without matching bone in previous frame");
                 bones[i] = prev.Bones[i].Clone();
-                if (!stream.GetB())
-                    bones[i].Frame = stream.GetI8();
+                if (!reader.ReadBool())
+                    bones[i].Frame = reader.ReadI8();
             }
             else
             {
-                bones[i] = AnmBone.CreateFrom(stream, i > 0 ? bones[i - 1] : null);
+                bones[i] = AnmBone.CreateFrom(reader, i > 0 ? bones[i - 1] : null);
             }
         }
 
@@ -61,43 +62,43 @@ public sealed class AnmFrame
         };
     }
 
-    internal static async Task<AnmFrame> CreateFromAsync(Stream stream, AnmFrame? prev, CancellationToken ctoken = default)
+    internal static async Task<AnmFrame> CreateFromAsync(DataReader reader, AnmFrame? prev, CancellationToken ctoken = default)
     {
-        short id = await stream.GetI16Async(ctoken);
+        short id = await reader.ReadI16Async(ctoken);
 
         (double x, double y)? fireSocket = null;
-        if (await stream.GetBAsync(ctoken))
+        if (await reader.ReadBoolAsync(ctoken))
         {
-            double x = await stream.GetF64Async(ctoken);
-            double y = await stream.GetF64Async(ctoken);
+            double x = await reader.ReadF64Async(ctoken);
+            double y = await reader.ReadF64Async(ctoken);
             fireSocket = (x, y);
         }
 
         (double x, double y)? ebPlatformPos = null;
-        if (await stream.GetBAsync(ctoken))
+        if (await reader.ReadBoolAsync(ctoken))
         {
-            double x = await stream.GetF64Async(ctoken);
-            double y = await stream.GetF64Async(ctoken);
+            double x = await reader.ReadF64Async(ctoken);
+            double y = await reader.ReadF64Async(ctoken);
             ebPlatformPos = (x, y);
         }
 
-        short bonesCount = await stream.GetI16Async(ctoken);
+        short bonesCount = await reader.ReadI16Async(ctoken);
         AnmBone[] bones = new AnmBone[bonesCount];
         for (int i = 0; i < bonesCount; ++i)
         {
-            if (await stream.GetBAsync(ctoken))
+            if (await reader.ReadBoolAsync(ctoken))
             {
                 if (prev is null)
                     throw new Exception("Bone duplication in first animation frame");
                 if (i >= prev.Bones.Length)
                     throw new Exception("Bone duplication without matching bone in previous frame");
                 bones[i] = prev.Bones[i].Clone();
-                if (!await stream.GetBAsync(ctoken))
-                    bones[i].Frame = await stream.GetI8Async(ctoken);
+                if (!await reader.ReadBoolAsync(ctoken))
+                    bones[i].Frame = await reader.ReadI8Async(ctoken);
             }
             else
             {
-                bones[i] = await AnmBone.CreateFromAsync(stream, i > 0 ? bones[i - 1] : null, ctoken);
+                bones[i] = await AnmBone.CreateFromAsync(reader, i > 0 ? bones[i - 1] : null, ctoken);
             }
         }
 

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor.Version_904;
 
@@ -11,16 +12,16 @@ public sealed class AnmClass_904
     public required string FileName { get; set; }
     public required Dictionary<string, AnmAnimation_904> Animations { get; set; }
 
-    internal static AnmClass_904 CreateFrom(Stream stream)
+    internal static AnmClass_904 CreateFrom(DataReader reader)
     {
-        string index = stream.GetStr();
-        string fileName = stream.GetStr();
+        string index = reader.ReadStr();
+        string fileName = reader.ReadStr();
 
-        uint animationCount = stream.GetU32();
+        uint animationCount = reader.ReadU32();
         Dictionary<string, AnmAnimation_904> animations = new((int)animationCount);
         for (uint i = 0; i < animationCount; ++i)
         {
-            AnmAnimation_904 animation = AnmAnimation_904.CreateFrom(stream);
+            AnmAnimation_904 animation = AnmAnimation_904.CreateFrom(reader);
             animations[animation.Name] = animation;
         }
 
@@ -32,16 +33,16 @@ public sealed class AnmClass_904
         };
     }
 
-    internal static async Task<AnmClass_904> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmClass_904> CreateFromAsync(DataReader reader, CancellationToken ctoken = default)
     {
-        string index = await stream.GetStrAsync(ctoken);
-        string fileName = await stream.GetStrAsync(ctoken);
+        string index = await reader.ReadStrAsync(ctoken);
+        string fileName = await reader.ReadStrAsync(ctoken);
 
-        uint animationCount = await stream.GetU32Async(ctoken);
+        uint animationCount = await reader.ReadU32Async(ctoken);
         Dictionary<string, AnmAnimation_904> animations = new((int)animationCount);
         for (uint i = 0; i < animationCount; ++i)
         {
-            AnmAnimation_904 animation = await AnmAnimation_904.CreateFromAsync(stream, ctoken);
+            AnmAnimation_904 animation = await AnmAnimation_904.CreateFromAsync(reader, ctoken);
             animations[animation.Name] = animation;
         }
 

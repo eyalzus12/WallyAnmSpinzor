@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor;
 
@@ -15,29 +16,29 @@ public sealed class AnmAnimation
     public required uint[] Data { get; set; }
     public required AnmFrame[] Frames { get; set; }
 
-    internal static AnmAnimation CreateFrom(Stream stream)
+    internal static AnmAnimation CreateFrom(DataReader reader)
     {
-        string name = stream.GetStr();
-        uint frameCount = stream.GetU32();
-        uint loopStart = stream.GetU32();
-        uint recoveryStart = stream.GetU32();
-        uint freeStart = stream.GetU32();
-        uint previewFrame = stream.GetU32();
-        uint baseStart = stream.GetU32();
-        uint dataSize = stream.GetU32();
+        string name = reader.ReadStr();
+        uint frameCount = reader.ReadU32();
+        uint loopStart = reader.ReadU32();
+        uint recoveryStart = reader.ReadU32();
+        uint freeStart = reader.ReadU32();
+        uint previewFrame = reader.ReadU32();
+        uint baseStart = reader.ReadU32();
+        uint dataSize = reader.ReadU32();
         uint[] data = new uint[dataSize];
         for (int i = 0; i < dataSize; ++i)
         {
-            data[i] = stream.GetU32();
+            data[i] = reader.ReadU32();
         }
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        _ = stream.GetU32();
+        _ = reader.ReadU32();
         AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
         {
             AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
-            frames[i] = AnmFrame.CreateFrom(stream, prevFrame);
+            frames[i] = AnmFrame.CreateFrom(reader, prevFrame);
         }
 
         return new()
@@ -53,29 +54,29 @@ public sealed class AnmAnimation
         };
     }
 
-    internal static async Task<AnmAnimation> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmAnimation> CreateFromAsync(DataReader reader, CancellationToken ctoken = default)
     {
-        string name = await stream.GetStrAsync(ctoken);
-        uint frameCount = await stream.GetU32Async(ctoken);
-        uint loopStart = await stream.GetU32Async(ctoken);
-        uint recoveryStart = await stream.GetU32Async(ctoken);
-        uint freeStart = await stream.GetU32Async(ctoken);
-        uint previewFrame = await stream.GetU32Async(ctoken);
-        uint baseStart = await stream.GetU32Async(ctoken);
-        uint dataSize = await stream.GetU32Async(ctoken);
+        string name = await reader.ReadStrAsync(ctoken);
+        uint frameCount = await reader.ReadU32Async(ctoken);
+        uint loopStart = await reader.ReadU32Async(ctoken);
+        uint recoveryStart = await reader.ReadU32Async(ctoken);
+        uint freeStart = await reader.ReadU32Async(ctoken);
+        uint previewFrame = await reader.ReadU32Async(ctoken);
+        uint baseStart = await reader.ReadU32Async(ctoken);
+        uint dataSize = await reader.ReadU32Async(ctoken);
         uint[] data = new uint[dataSize];
         for (int i = 0; i < dataSize; ++i)
         {
-            data[i] = await stream.GetU32Async(ctoken);
+            data[i] = await reader.ReadU32Async(ctoken);
         }
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
-        _ = await stream.GetU32Async(ctoken);
+        _ = await reader.ReadU32Async(ctoken);
         AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
         {
             AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
-            frames[i] = await AnmFrame.CreateFromAsync(stream, prevFrame, ctoken);
+            frames[i] = await AnmFrame.CreateFromAsync(reader, prevFrame, ctoken);
         }
 
         return new()

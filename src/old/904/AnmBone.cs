@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor.Version_904;
 
@@ -17,15 +18,15 @@ public sealed class AnmBone_904
     public required double Opacity { get; set; }
     public required short Frame { get; set; }
 
-    internal static AnmBone_904 CreateFrom(Stream stream)
+    internal static AnmBone_904 CreateFrom(DataReader reader)
     {
-        short id = stream.GetI16();
-        bool opaque = stream.GetB();
+        short id = reader.ReadI16();
+        bool opaque = reader.ReadBool();
         bool identity = false;
         bool symmetric = false;
-        if (stream.GetB())
+        if (reader.ReadBool())
         {
-            if (stream.GetB()) identity = true;
+            if (reader.ReadBool()) identity = true;
             else symmetric = true;
         }
 
@@ -37,8 +38,8 @@ public sealed class AnmBone_904
         }
         else
         {
-            scaleX = stream.GetF32();
-            rotateSkew0 = stream.GetF32();
+            scaleX = reader.ReadF32();
+            rotateSkew0 = reader.ReadF32();
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -46,17 +47,17 @@ public sealed class AnmBone_904
             }
             else
             {
-                rotateSkew1 = stream.GetF32();
-                scaleY = stream.GetF32();
+                rotateSkew1 = reader.ReadF32();
+                scaleY = reader.ReadF32();
             }
         }
-        float x = stream.GetF32();
-        float y = stream.GetF32();
-        short frame = stream.GetI16();
+        float x = reader.ReadF32();
+        float y = reader.ReadF32();
+        short frame = reader.ReadI16();
         double opacity = 1.0;
         if (!opaque)
         {
-            opacity = stream.GetU8() / 255.0;
+            opacity = reader.ReadU8() / 255.0;
         }
 
         return new()
@@ -73,15 +74,15 @@ public sealed class AnmBone_904
         };
     }
 
-    internal static async Task<AnmBone_904> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmBone_904> CreateFromAsync(DataReader reader, CancellationToken ctoken = default)
     {
-        short id = await stream.GetI16Async(ctoken);
-        bool opaque = await stream.GetBAsync(ctoken);
+        short id = await reader.ReadI16Async(ctoken);
+        bool opaque = await reader.ReadBoolAsync(ctoken);
         bool identity = false;
         bool symmetric = false;
-        if (await stream.GetBAsync(ctoken))
+        if (await reader.ReadBoolAsync(ctoken))
         {
-            if (await stream.GetBAsync(ctoken)) identity = true;
+            if (await reader.ReadBoolAsync(ctoken)) identity = true;
             else symmetric = true;
         }
 
@@ -93,8 +94,8 @@ public sealed class AnmBone_904
         }
         else
         {
-            scaleX = await stream.GetF32Async(ctoken);
-            rotateSkew0 = await stream.GetF32Async(ctoken);
+            scaleX = await reader.ReadF32Async(ctoken);
+            rotateSkew0 = await reader.ReadF32Async(ctoken);
             if (symmetric)
             {
                 rotateSkew1 = rotateSkew0;
@@ -102,17 +103,17 @@ public sealed class AnmBone_904
             }
             else
             {
-                rotateSkew1 = await stream.GetF32Async(ctoken);
-                scaleY = await stream.GetF32Async(ctoken);
+                rotateSkew1 = await reader.ReadF32Async(ctoken);
+                scaleY = await reader.ReadF32Async(ctoken);
             }
         }
-        float x = await stream.GetF32Async(ctoken);
-        float y = await stream.GetF32Async(ctoken);
-        short frame = await stream.GetI16Async(ctoken);
+        float x = await reader.ReadF32Async(ctoken);
+        float y = await reader.ReadF32Async(ctoken);
+        short frame = await reader.ReadI16Async(ctoken);
         double opacity = 1.0;
         if (!opaque)
         {
-            opacity = await stream.GetU8Async(ctoken) / 255.0;
+            opacity = await reader.ReadU8Async(ctoken) / 255.0;
         }
 
         return new()

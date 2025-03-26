@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor;
 
@@ -17,14 +18,14 @@ public sealed class AnmBone
     public required double Opacity { get; set; }
     public required sbyte Frame { get; set; }
 
-    internal static AnmBone CreateFrom(Stream stream, AnmBone? prev)
+    internal static AnmBone CreateFrom(DataReader reader, AnmBone? prev)
     {
-        short id = stream.GetI16();
-        bool opaque = stream.GetB();
+        short id = reader.ReadI16();
+        bool opaque = reader.ReadBool();
 
         float scaleX, rotateSkew0, rotateSkew1, scaleY;
         // copy transform from prev
-        if (stream.GetB())
+        if (reader.ReadBool())
         {
             if (prev is null) throw new Exception("Bone copies transform from previous, but there is no previous bone");
             scaleX = prev.ScaleX;
@@ -36,9 +37,9 @@ public sealed class AnmBone
         {
             bool identity = false;
             bool symmetric = false;
-            if (stream.GetB())
+            if (reader.ReadBool())
             {
-                if (stream.GetB()) identity = true;
+                if (reader.ReadBool()) identity = true;
                 else symmetric = true;
             }
 
@@ -49,8 +50,8 @@ public sealed class AnmBone
             }
             else
             {
-                scaleX = stream.GetF32();
-                rotateSkew0 = stream.GetF32();
+                scaleX = reader.ReadF32();
+                rotateSkew0 = reader.ReadF32();
                 if (symmetric)
                 {
                     rotateSkew1 = rotateSkew0;
@@ -58,15 +59,15 @@ public sealed class AnmBone
                 }
                 else
                 {
-                    rotateSkew1 = stream.GetF32();
-                    scaleY = stream.GetF32();
+                    rotateSkew1 = reader.ReadF32();
+                    scaleY = reader.ReadF32();
                 }
             }
         }
 
         float x, y;
         // copy position from prev
-        if (stream.GetB())
+        if (reader.ReadBool())
         {
             if (prev is null) throw new Exception("Bone copies position from previous, but there is no previous bone");
             x = prev.X;
@@ -74,17 +75,17 @@ public sealed class AnmBone
         }
         else
         {
-            x = stream.GetF32();
-            y = stream.GetF32();
+            x = reader.ReadF32();
+            y = reader.ReadF32();
         }
 
         sbyte frame = 1;
-        if (stream.GetB())
-            frame = stream.GetI8();
+        if (reader.ReadBool())
+            frame = reader.ReadI8();
 
         double opacity = 1.0;
         if (!opaque)
-            opacity = stream.GetU8() / 255.0;
+            opacity = reader.ReadU8() / 255.0;
 
         return new()
         {
@@ -100,14 +101,14 @@ public sealed class AnmBone
         };
     }
 
-    internal static async Task<AnmBone> CreateFromAsync(Stream stream, AnmBone? prev, CancellationToken ctoken = default)
+    internal static async Task<AnmBone> CreateFromAsync(DataReader reader, AnmBone? prev, CancellationToken ctoken = default)
     {
-        short id = await stream.GetI16Async(ctoken);
-        bool opaque = await stream.GetBAsync(ctoken);
+        short id = await reader.ReadI16Async(ctoken);
+        bool opaque = await reader.ReadBoolAsync(ctoken);
 
         float scaleX, rotateSkew0, rotateSkew1, scaleY;
         // copy transform from prev
-        if (await stream.GetBAsync(ctoken))
+        if (await reader.ReadBoolAsync(ctoken))
         {
             if (prev is null) throw new Exception("Bone copies transform from previous, but there is no previous bone");
             scaleX = prev.ScaleX;
@@ -119,9 +120,9 @@ public sealed class AnmBone
         {
             bool identity = false;
             bool symmetric = false;
-            if (await stream.GetBAsync(ctoken))
+            if (await reader.ReadBoolAsync(ctoken))
             {
-                if (await stream.GetBAsync(ctoken)) identity = true;
+                if (await reader.ReadBoolAsync(ctoken)) identity = true;
                 else symmetric = true;
             }
 
@@ -132,8 +133,8 @@ public sealed class AnmBone
             }
             else
             {
-                scaleX = await stream.GetF32Async(ctoken);
-                rotateSkew0 = await stream.GetF32Async(ctoken);
+                scaleX = await reader.ReadF32Async(ctoken);
+                rotateSkew0 = await reader.ReadF32Async(ctoken);
                 if (symmetric)
                 {
                     rotateSkew1 = rotateSkew0;
@@ -141,15 +142,15 @@ public sealed class AnmBone
                 }
                 else
                 {
-                    rotateSkew1 = await stream.GetF32Async(ctoken);
-                    scaleY = await stream.GetF32Async(ctoken);
+                    rotateSkew1 = await reader.ReadF32Async(ctoken);
+                    scaleY = await reader.ReadF32Async(ctoken);
                 }
             }
         }
 
         float x, y;
         // copy position from prev
-        if (await stream.GetBAsync(ctoken))
+        if (await reader.ReadBoolAsync(ctoken))
         {
             if (prev is null) throw new Exception("Bone copies position from previous, but there is no previous bone");
             x = prev.X;
@@ -157,17 +158,17 @@ public sealed class AnmBone
         }
         else
         {
-            x = await stream.GetF32Async(ctoken);
-            y = await stream.GetF32Async(ctoken);
+            x = await reader.ReadF32Async(ctoken);
+            y = await reader.ReadF32Async(ctoken);
         }
 
         sbyte frame = 1;
-        if (await stream.GetBAsync(ctoken))
-            frame = await stream.GetI8Async(ctoken);
+        if (await reader.ReadBoolAsync(ctoken))
+            frame = await reader.ReadI8Async(ctoken);
 
         double opacity = 1.0;
         if (!opaque)
-            opacity = await stream.GetU8Async(ctoken) / 255.0;
+            opacity = await reader.ReadU8Async(ctoken) / 255.0;
 
         return new()
         {

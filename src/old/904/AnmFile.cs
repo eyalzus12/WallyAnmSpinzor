@@ -1,8 +1,11 @@
+using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using WallyAnmSpinzor.Internal;
 
 namespace WallyAnmSpinzor.Version_904;
 
@@ -13,16 +16,18 @@ public sealed class AnmFile_904
 
     public static AnmFile_904 CreateFrom(Stream stream, bool leaveOpen = false)
     {
-        int header = stream.GetI32();
+        int header = ReadHeader(stream);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        return CreateFromInternal(decompressedStream, header);
+        using DataReader reader = new(decompressedStream, !leaveOpen);
+        return CreateFromInternal(reader, header);
     }
 
     public static async Task<AnmFile_904> CreateFromAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
     {
-        int header = await stream.GetI32Async(ctoken);
+        int header = await ReadHeaderAsync(stream, ctoken);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        return await CreateFromInternalAsync(decompressedStream, header, ctoken);
+        using DataReader reader = new(decompressedStream, !leaveOpen);
+        return await CreateFromInternalAsync(reader, header, ctoken);
     }
 
     public void WriteTo(Stream stream, bool leaveOpen = false)
@@ -39,13 +44,27 @@ public sealed class AnmFile_904
         await WriteToInternalAsync(compressedStream, ctoken);
     }
 
-    internal static AnmFile_904 CreateFromInternal(Stream stream, int header)
+    internal static int ReadHeader(Stream stream)
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        stream.ReadExactly(buffer);
+        return BinaryPrimitives.ReadInt32LittleEndian(buffer);
+    }
+
+    internal static async ValueTask<int> ReadHeaderAsync(Stream stream, CancellationToken ctoken = default)
+    {
+        byte[] buffer = new byte[4];
+        await stream.ReadExactlyAsync(buffer, ctoken);
+        return BinaryPrimitives.ReadInt32LittleEndian(buffer);
+    }
+
+    internal static AnmFile_904 CreateFromInternal(DataReader reader, int header)
     {
         Dictionary<string, AnmClass_904> classes = [];
-        while (stream.GetB())
+        while (reader.ReadBool())
         {
-            string key = stream.GetStr();
-            AnmClass_904 @class = AnmClass_904.CreateFrom(stream);
+            string key = reader.ReadStr();
+            AnmClass_904 @class = AnmClass_904.CreateFrom(reader);
             classes[key] = @class;
         }
 
@@ -56,13 +75,13 @@ public sealed class AnmFile_904
         };
     }
 
-    internal static async Task<AnmFile_904> CreateFromInternalAsync(Stream stream, int header, CancellationToken ctoken = default)
+    internal static async Task<AnmFile_904> CreateFromInternalAsync(DataReader reader, int header, CancellationToken ctoken = default)
     {
         Dictionary<string, AnmClass_904> classes = [];
-        while (await stream.GetBAsync(ctoken))
+        while (await reader.ReadBoolAsync(ctoken))
         {
-            string key = await stream.GetStrAsync(ctoken);
-            AnmClass_904 @class = await AnmClass_904.CreateFromAsync(stream, ctoken);
+            string key = await reader.ReadStrAsync(ctoken);
+            AnmClass_904 @class = await AnmClass_904.CreateFromAsync(reader, ctoken);
             classes[key] = @class;
         }
 
