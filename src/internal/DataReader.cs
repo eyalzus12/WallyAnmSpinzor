@@ -154,7 +154,7 @@ internal sealed class DataReader : IDisposable
         if (_buffer.Length >= length) return;
 
         int newLength = _buffer.Length;
-        while (length > _buffer.Length)
+        while (length > newLength)
             newLength *= 2;
         _buffer = GC.AllocateUninitializedArray<byte>(newLength);
     }
