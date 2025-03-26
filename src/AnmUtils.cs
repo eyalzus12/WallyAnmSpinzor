@@ -59,6 +59,12 @@ internal static class AnmUtils
         return BinaryPrimitives.ReadUInt32LittleEndian(buffer);
     }
 
+    internal static sbyte GetI8(this Stream stream) => (sbyte)GetU8(stream);
+    internal static async ValueTask<sbyte> GetI8Async(this Stream stream, CancellationToken ctoken = default)
+    {
+        return (sbyte)await GetU8Async(stream, ctoken);
+    }
+
     internal static short GetI16(this Stream stream)
     {
         Span<byte> buffer = stackalloc byte[2];
@@ -140,7 +146,6 @@ internal static class AnmUtils
         return PutU8Async(stream, (byte)(b ? 1 : 0), ctoken);
     }
 
-
     internal static void PutU8(this Stream stream, byte u8)
     {
         stream.WriteByte(u8);
@@ -178,6 +183,12 @@ internal static class AnmUtils
         byte[] buffer = new byte[4];
         BinaryPrimitives.WriteUInt32LittleEndian(buffer, u32);
         return stream.WriteAsync(buffer, ctoken);
+    }
+
+    internal static void PutI8(this Stream stream, sbyte i8) => PutU8(stream, (byte)i8);
+    internal static ValueTask PutI8Async(this Stream stream, sbyte i8, CancellationToken ctoken = default)
+    {
+        return PutU8Async(stream, (byte)i8, ctoken);
     }
 
     internal static void PutI16(this Stream stream, short i16)

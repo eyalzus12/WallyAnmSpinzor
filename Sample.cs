@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-namespace WallyAnmSpinzor;
+using System.Threading.Tasks;
+using WallyAnmSpinzor;
 
 internal class Sample
 {
-    public static void SerializeToJson(string filePath, string outputPath)
+    public static async Task SerializeToJson(string filePath, string outputPath)
     {
         JsonSerializerOptions options = new()
         {
@@ -17,12 +17,12 @@ internal class Sample
 
         AnmFile anm;
         using (FileStream file = new(filePath, FileMode.Open, FileAccess.Read))
-            anm = AnmFile.CreateFrom(file);
+            anm = await AnmFile.CreateFromAsync(file);
         using (FileStream outFile = new(outputPath, FileMode.Create, FileAccess.Write))
-            JsonSerializer.Serialize(outFile, anm, options);
+            await JsonSerializer.SerializeAsync(outFile, anm, options);
     }
 
-    public static void JsonToAnm(string jsonPath, string outputPath)
+    public static async Task JsonToAnm(string jsonPath, string outputPath)
     {
         JsonSerializerOptions options = new()
         {
@@ -31,8 +31,8 @@ internal class Sample
         };
         AnmFile anm;
         using (FileStream file = new(jsonPath, FileMode.Open, FileAccess.Read))
-            anm = JsonSerializer.Deserialize<AnmFile>(file, options) ?? throw new Exception("bad json format");
+            anm = await JsonSerializer.DeserializeAsync<AnmFile>(file, options) ?? throw new Exception("bad json format");
         using (FileStream outFile = new(outputPath, FileMode.Create, FileAccess.Write))
-            anm.WriteTo(outFile);
+            await anm.WriteToAsync(outFile);
     }
 }

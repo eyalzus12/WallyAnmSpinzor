@@ -2,9 +2,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WallyAnmSpinzor.Version_904;
+namespace WallyAnmSpinzor;
 
-public sealed class AnmAnimation_904
+public sealed class AnmAnimation
 {
     public required string Name { get; set; }
     public required uint LoopStart { get; set; }
@@ -13,9 +13,9 @@ public sealed class AnmAnimation_904
     public required uint PreviewFrame { get; set; }
     public required uint BaseStart { get; set; }
     public required uint[] Data { get; set; }
-    public required AnmFrame_904[] Frames { get; set; }
+    public required AnmFrame[] Frames { get; set; }
 
-    internal static AnmAnimation_904 CreateFrom(Stream stream)
+    internal static AnmAnimation CreateFrom(Stream stream)
     {
         string name = stream.GetStr();
         uint frameCount = stream.GetU32();
@@ -33,11 +33,11 @@ public sealed class AnmAnimation_904
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
         _ = stream.GetU32();
-        AnmFrame_904[] frames = new AnmFrame_904[frameCount];
+        AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
         {
-            AnmFrame_904? prevFrame = i == 0 ? null : frames[i - 1];
-            frames[i] = AnmFrame_904.CreateFrom(stream, prevFrame);
+            AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
+            frames[i] = AnmFrame.CreateFrom(stream, prevFrame);
         }
 
         return new()
@@ -53,7 +53,7 @@ public sealed class AnmAnimation_904
         };
     }
 
-    internal static async Task<AnmAnimation_904> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
+    internal static async Task<AnmAnimation> CreateFromAsync(Stream stream, CancellationToken ctoken = default)
     {
         string name = await stream.GetStrAsync(ctoken);
         uint frameCount = await stream.GetU32Async(ctoken);
@@ -71,11 +71,11 @@ public sealed class AnmAnimation_904
         // this discarded value tells the game what's the size of the frames field.
         // this is used to be able to load the frames on-demand.
         _ = await stream.GetU32Async(ctoken);
-        AnmFrame_904[] frames = new AnmFrame_904[frameCount];
+        AnmFrame[] frames = new AnmFrame[frameCount];
         for (int i = 0; i < frameCount; ++i)
         {
-            AnmFrame_904? prevFrame = i == 0 ? null : frames[i - 1];
-            frames[i] = await AnmFrame_904.CreateFromAsync(stream, prevFrame, ctoken);
+            AnmFrame? prevFrame = i == 0 ? null : frames[i - 1];
+            frames[i] = await AnmFrame.CreateFromAsync(stream, prevFrame, ctoken);
         }
 
         return new()
@@ -108,7 +108,7 @@ public sealed class AnmAnimation_904
         stream.PutU32(GetFramesByteCount());
         for (int i = 0; i < Frames.Length; ++i)
         {
-            AnmFrame_904? prevFrame = i == 0 ? null : Frames[i - 1];
+            AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
             Frames[i].WriteTo(stream, prevFrame);
         }
     }
@@ -130,7 +130,7 @@ public sealed class AnmAnimation_904
         await stream.PutU32Async(GetFramesByteCount(), ctoken);
         for (int i = 0; i < Frames.Length; ++i)
         {
-            AnmFrame_904? prevFrame = i == 0 ? null : Frames[i - 1];
+            AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
             await Frames[i].WriteToAsync(stream, prevFrame, ctoken);
         }
     }
@@ -140,7 +140,7 @@ public sealed class AnmAnimation_904
         uint size = 0;
         for (int i = 0; i < Frames.Length; ++i)
         {
-            AnmFrame_904? prevFrame = i == 0 ? null : Frames[i - 1];
+            AnmFrame? prevFrame = i == 0 ? null : Frames[i - 1];
             size += Frames[i].GetByteCount(prevFrame);
         }
         return size;
