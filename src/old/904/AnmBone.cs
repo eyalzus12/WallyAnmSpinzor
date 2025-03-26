@@ -130,77 +130,77 @@ public sealed class AnmBone_904
         };
     }
 
-    internal void WriteTo(Stream stream)
+    internal void WriteTo(DataWriter writer)
     {
-        stream.PutI16(Id);
-        stream.PutB(Opacity == 1);
+        writer.WriteI16(Id);
+        writer.WriteBool(Opacity == 1);
 
         bool identity = IsIdentity;
         bool symmetric = IsSymmetric;
         if (identity || symmetric)
         {
-            stream.PutB(true);
-            stream.PutB(identity);
+            writer.WriteBool(true);
+            writer.WriteBool(identity);
         }
         else
         {
-            stream.PutB(false);
+            writer.WriteBool(false);
         }
 
         if (!identity)
         {
-            stream.PutF32(ScaleX);
-            stream.PutF32(RotateSkew0);
+            writer.WriteF32(ScaleX);
+            writer.WriteF32(RotateSkew0);
             if (!symmetric)
             {
-                stream.PutF32(RotateSkew1);
-                stream.PutF32(ScaleY);
+                writer.WriteF32(RotateSkew1);
+                writer.WriteF32(ScaleY);
             }
         }
-        stream.PutF32(X);
-        stream.PutF32(Y);
-        stream.PutI16(Frame);
+        writer.WriteF32(X);
+        writer.WriteF32(Y);
+        writer.WriteI16(Frame);
         if (Opacity != 1)
         {
             byte opacity = (byte)Math.Round(Opacity * 255);
-            stream.PutU8(opacity);
+            writer.WriteU8(opacity);
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(DataWriter writer, CancellationToken ctoken = default)
     {
-        await stream.PutI16Async(Id, ctoken);
-        await stream.PutBAsync(Opacity == 1, ctoken);
+        await writer.WriteI16Async(Id, ctoken);
+        await writer.WriteBoolAsync(Opacity == 1, ctoken);
 
         bool identity = IsIdentity;
         bool symmetric = IsSymmetric;
         if (identity || symmetric)
         {
-            await stream.PutBAsync(true, ctoken);
-            await stream.PutBAsync(identity, ctoken);
+            await writer.WriteBoolAsync(true, ctoken);
+            await writer.WriteBoolAsync(identity, ctoken);
         }
         else
         {
-            await stream.PutBAsync(false, ctoken);
+            await writer.WriteBoolAsync(false, ctoken);
         }
 
         if (!identity)
         {
-            await stream.PutF32Async(ScaleX, ctoken);
-            await stream.PutF32Async(RotateSkew0, ctoken);
+            await writer.WriteF32Async(ScaleX, ctoken);
+            await writer.WriteF32Async(RotateSkew0, ctoken);
             if (!symmetric)
             {
-                await stream.PutF32Async(RotateSkew1, ctoken);
-                await stream.PutF32Async(ScaleY, ctoken);
+                await writer.WriteF32Async(RotateSkew1, ctoken);
+                await writer.WriteF32Async(ScaleY, ctoken);
             }
         }
-        await stream.PutF32Async(X, ctoken);
-        await stream.PutF32Async(Y, ctoken);
-        await stream.PutI16Async(Frame, ctoken);
+        await writer.WriteF32Async(X, ctoken);
+        await writer.WriteF32Async(Y, ctoken);
+        await writer.WriteI16Async(Frame, ctoken);
         if (Opacity != 1)
         {
             byte opacity = (byte)Math.Round(Opacity * 255);
-            await stream.PutU8Async(opacity, ctoken);
+            await writer.WriteU8Async(opacity, ctoken);
         }
     }
 

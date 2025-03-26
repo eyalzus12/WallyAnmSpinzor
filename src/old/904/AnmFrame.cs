@@ -116,104 +116,104 @@ public sealed class AnmFrame_904
         };
     }
 
-    internal void WriteTo(Stream stream, AnmFrame_904? prevFrame)
+    internal void WriteTo(DataWriter writer, AnmFrame_904? prevFrame)
     {
-        stream.PutI16(Id);
+        writer.WriteI16(Id);
 
         if (FireSocket is null)
         {
-            stream.PutB(false);
+            writer.WriteBool(false);
         }
         else
         {
-            stream.PutB(true);
-            stream.PutF64(FireSocket.Value.X);
-            stream.PutF64(FireSocket.Value.Y);
+            writer.WriteBool(true);
+            writer.WriteF64(FireSocket.Value.X);
+            writer.WriteF64(FireSocket.Value.Y);
         }
 
         if (EBPlatformPos is null)
         {
-            stream.PutB(false);
+            writer.WriteBool(false);
         }
         else
         {
-            stream.PutB(true);
-            stream.PutF64(EBPlatformPos.Value.X);
-            stream.PutF64(EBPlatformPos.Value.Y);
+            writer.WriteBool(true);
+            writer.WriteF64(EBPlatformPos.Value.X);
+            writer.WriteF64(EBPlatformPos.Value.Y);
         }
 
-        stream.PutF64(EBPlatformRot);
-        stream.PutI16((short)Bones.Length);
+        writer.WriteF64(EBPlatformRot);
+        writer.WriteI16((short)Bones.Length);
         for (int i = 0; i < Bones.Length; ++i)
         {
             if (prevFrame is not null && i < prevFrame.Bones.Length && Bones[i].IsPartialCloneOf(prevFrame.Bones[i]))
             {
-                stream.PutB(true);
+                writer.WriteBool(true);
                 if (Bones[i].Frame == prevFrame.Bones[i].Frame)
                 {
-                    stream.PutB(true);
+                    writer.WriteBool(true);
                 }
                 else
                 {
-                    stream.PutB(false);
-                    stream.PutI16(Bones[i].Frame);
+                    writer.WriteBool(false);
+                    writer.WriteI16(Bones[i].Frame);
                 }
             }
             else
             {
-                stream.PutB(false);
-                Bones[i].WriteTo(stream);
+                writer.WriteBool(false);
+                Bones[i].WriteTo(writer);
             }
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, AnmFrame_904? prevFrame, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(DataWriter writer, AnmFrame_904? prevFrame, CancellationToken ctoken = default)
     {
-        await stream.PutI16Async(Id, ctoken);
+        await writer.WriteI16Async(Id, ctoken);
 
         if (FireSocket is null)
         {
-            await stream.PutBAsync(false, ctoken);
+            await writer.WriteBoolAsync(false, ctoken);
         }
         else
         {
-            await stream.PutBAsync(true, ctoken);
-            await stream.PutF64Async(FireSocket.Value.X, ctoken);
-            await stream.PutF64Async(FireSocket.Value.Y, ctoken);
+            await writer.WriteBoolAsync(true, ctoken);
+            await writer.WriteF64Async(FireSocket.Value.X, ctoken);
+            await writer.WriteF64Async(FireSocket.Value.Y, ctoken);
         }
 
         if (EBPlatformPos is null)
         {
-            await stream.PutBAsync(false, ctoken);
+            await writer.WriteBoolAsync(false, ctoken);
         }
         else
         {
-            await stream.PutBAsync(true, ctoken);
-            await stream.PutF64Async(EBPlatformPos.Value.X, ctoken);
-            await stream.PutF64Async(EBPlatformPos.Value.Y, ctoken);
+            await writer.WriteBoolAsync(true, ctoken);
+            await writer.WriteF64Async(EBPlatformPos.Value.X, ctoken);
+            await writer.WriteF64Async(EBPlatformPos.Value.Y, ctoken);
         }
 
-        await stream.PutF64Async(EBPlatformRot, ctoken);
-        await stream.PutI16Async((short)Bones.Length, ctoken);
+        await writer.WriteF64Async(EBPlatformRot, ctoken);
+        await writer.WriteI16Async((short)Bones.Length, ctoken);
         for (int i = 0; i < Bones.Length; ++i)
         {
             if (prevFrame is not null && i < prevFrame.Bones.Length && Bones[i].IsPartialCloneOf(prevFrame.Bones[i]))
             {
-                await stream.PutBAsync(true, ctoken);
+                await writer.WriteBoolAsync(true, ctoken);
                 if (Bones[i].Frame == prevFrame.Bones[i].Frame)
                 {
-                    await stream.PutBAsync(true, ctoken);
+                    await writer.WriteBoolAsync(true, ctoken);
                 }
                 else
                 {
-                    await stream.PutBAsync(false, ctoken);
-                    await stream.PutI16Async(Bones[i].Frame, ctoken);
+                    await writer.WriteBoolAsync(false, ctoken);
+                    await writer.WriteI16Async(Bones[i].Frame, ctoken);
                 }
             }
             else
             {
-                await stream.PutBAsync(false, ctoken);
-                await Bones[i].WriteToAsync(stream, ctoken);
+                await writer.WriteBoolAsync(false, ctoken);
+                await Bones[i].WriteToAsync(writer, ctoken);
             }
         }
     }

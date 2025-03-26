@@ -93,47 +93,47 @@ public sealed class AnmAnimation_904
         };
     }
 
-    internal void WriteTo(Stream stream)
+    internal void WriteTo(DataWriter writer)
     {
-        stream.PutStr(Name);
-        stream.PutU32((uint)Frames.Length);
-        stream.PutU32(LoopStart);
-        stream.PutU32(RecoveryStart);
-        stream.PutU32(FreeStart);
-        stream.PutU32(PreviewFrame);
-        stream.PutU32(BaseStart);
-        stream.PutU32((uint)Data.Length);
+        writer.WriteStr(Name);
+        writer.WriteU32((uint)Frames.Length);
+        writer.WriteU32(LoopStart);
+        writer.WriteU32(RecoveryStart);
+        writer.WriteU32(FreeStart);
+        writer.WriteU32(PreviewFrame);
+        writer.WriteU32(BaseStart);
+        writer.WriteU32((uint)Data.Length);
         foreach (uint datum in Data)
         {
-            stream.PutU32(datum);
+            writer.WriteU32(datum);
         }
-        stream.PutU32(GetFramesByteCount());
+        writer.WriteU32(GetFramesByteCount());
         for (int i = 0; i < Frames.Length; ++i)
         {
             AnmFrame_904? prevFrame = i == 0 ? null : Frames[i - 1];
-            Frames[i].WriteTo(stream, prevFrame);
+            Frames[i].WriteTo(writer, prevFrame);
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(DataWriter writer, CancellationToken ctoken = default)
     {
-        await stream.PutStrAsync(Name, ctoken);
-        await stream.PutU32Async((uint)Frames.Length, ctoken);
-        await stream.PutU32Async(LoopStart, ctoken);
-        await stream.PutU32Async(RecoveryStart, ctoken);
-        await stream.PutU32Async(FreeStart, ctoken);
-        await stream.PutU32Async(PreviewFrame, ctoken);
-        await stream.PutU32Async(BaseStart, ctoken);
-        await stream.PutU32Async((uint)Data.Length, ctoken);
+        await writer.WriteStrAsync(Name, ctoken);
+        await writer.WriteU32Async((uint)Frames.Length, ctoken);
+        await writer.WriteU32Async(LoopStart, ctoken);
+        await writer.WriteU32Async(RecoveryStart, ctoken);
+        await writer.WriteU32Async(FreeStart, ctoken);
+        await writer.WriteU32Async(PreviewFrame, ctoken);
+        await writer.WriteU32Async(BaseStart, ctoken);
+        await writer.WriteU32Async((uint)Data.Length, ctoken);
         foreach (uint datum in Data)
         {
-            await stream.PutU32Async(datum, ctoken);
+            await writer.WriteU32Async(datum, ctoken);
         }
-        await stream.PutU32Async(GetFramesByteCount(), ctoken);
+        await writer.WriteU32Async(GetFramesByteCount(), ctoken);
         for (int i = 0; i < Frames.Length; ++i)
         {
             AnmFrame_904? prevFrame = i == 0 ? null : Frames[i - 1];
-            await Frames[i].WriteToAsync(stream, prevFrame, ctoken);
+            await Frames[i].WriteToAsync(writer, prevFrame, ctoken);
         }
     }
 

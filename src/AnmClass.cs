@@ -54,25 +54,25 @@ public sealed class AnmClass
         };
     }
 
-    internal void WriteTo(Stream stream)
+    internal void WriteTo(DataWriter writer)
     {
-        stream.PutStr(Index);
-        stream.PutStr(FileName);
-        stream.PutU32((uint)Animations.Count);
+        writer.WriteStr(Index);
+        writer.WriteStr(FileName);
+        writer.WriteU32((uint)Animations.Count);
         foreach ((_, AnmAnimation animation) in Animations)
         {
-            animation.WriteTo(stream);
+            animation.WriteTo(writer);
         }
     }
 
-    internal async Task WriteToAsync(Stream stream, CancellationToken ctoken = default)
+    internal async Task WriteToAsync(DataWriter writer, CancellationToken ctoken = default)
     {
-        await stream.PutStrAsync(Index, ctoken);
-        await stream.PutStrAsync(FileName, ctoken);
-        await stream.PutU32Async((uint)Animations.Count, ctoken);
+        await writer.WriteStrAsync(Index, ctoken);
+        await writer.WriteStrAsync(FileName, ctoken);
+        await writer.WriteU32Async((uint)Animations.Count, ctoken);
         foreach ((_, AnmAnimation animation) in Animations)
         {
-            await animation.WriteToAsync(stream, ctoken);
+            await animation.WriteToAsync(writer, ctoken);
         }
     }
 }

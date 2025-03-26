@@ -18,7 +18,7 @@ public sealed class AnmFile
     {
         int header = ReadHeader(stream);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        using DataReader reader = new(decompressedStream, !leaveOpen);
+        using DataReader reader = new(decompressedStream, leaveOpen);
         return CreateFromInternal(reader, header);
     }
 
@@ -26,22 +26,24 @@ public sealed class AnmFile
     {
         int header = await ReadHeaderAsync(stream, ctoken);
         using ZLibStream decompressedStream = new(stream, CompressionMode.Decompress, leaveOpen);
-        using DataReader reader = new(decompressedStream, !leaveOpen);
+        using DataReader reader = new(decompressedStream, leaveOpen);
         return await CreateFromInternalAsync(reader, header, ctoken);
     }
 
     public void WriteTo(Stream stream, bool leaveOpen = false)
     {
-        stream.PutI32(Header);
+        WriteHeader(stream);
         using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
-        WriteToInternal(compressedStream);
+        using DataWriter writer = new(compressedStream, leaveOpen);
+        WriteToInternal(writer);
     }
 
     public async Task WriteToAsync(Stream stream, bool leaveOpen = false, CancellationToken ctoken = default)
     {
-        await stream.PutI32Async(Header, ctoken);
+        await WriteHeaderAsync(stream, ctoken);
         using ZLibStream compressedStream = new(stream, CompressionLevel.SmallestSize, leaveOpen);
-        await WriteToInternalAsync(compressedStream, ctoken);
+        using DataWriter writer = new(compressedStream, leaveOpen);
+        await WriteToInternalAsync(writer, ctoken);
     }
 
     internal static int ReadHeader(Stream stream)
@@ -54,7 +56,7 @@ public sealed class AnmFile
     internal static async ValueTask<int> ReadHeaderAsync(Stream stream, CancellationToken ctoken = default)
     {
         byte[] buffer = new byte[4];
-        await stream.ReadExactlyAsync(buffer, ctoken);
+        await stream.ReadExactlyAsync(buffer, ctoken).ConfigureAwait(false);
         return BinaryPrimitives.ReadInt32LittleEndian(buffer);
     }
 
@@ -92,25 +94,39 @@ public sealed class AnmFile
         };
     }
 
-    internal void WriteToInternal(Stream stream)
+    internal void WriteHeader(Stream stream)
     {
-        foreach ((string key, AnmClass @class) in Classes)
-        {
-            stream.PutB(true);
-            stream.PutStr(key);
-            @class.WriteTo(stream);
-        }
-        stream.PutB(false);
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer, Header);
+        stream.Write(buffer);
     }
 
-    internal async Task WriteToInternalAsync(Stream stream, CancellationToken ctoken = default)
+    internal async ValueTask WriteHeaderAsync(Stream stream, CancellationToken ctoken = default)
+    {
+        byte[] buffer = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer, Header);
+        await stream.WriteAsync(buffer, ctoken).ConfigureAwait(false);
+    }
+
+    internal void WriteToInternal(DataWriter writer)
     {
         foreach ((string key, AnmClass @class) in Classes)
         {
-            await stream.PutBAsync(true, ctoken);
-            await stream.PutStrAsync(key, ctoken);
-            await @class.WriteToAsync(stream, ctoken);
+            writer.WriteBool(true);
+            writer.WriteStr(key);
+            @class.WriteTo(writer);
         }
-        await stream.PutBAsync(false, ctoken);
+        writer.WriteBool(false);
+    }
+
+    internal async Task WriteToInternalAsync(DataWriter writer, CancellationToken ctoken = default)
+    {
+        foreach ((string key, AnmClass @class) in Classes)
+        {
+            await writer.WriteBoolAsync(true, ctoken);
+            await writer.WriteStrAsync(key, ctoken);
+            await @class.WriteToAsync(writer, ctoken);
+        }
+        await writer.WriteBoolAsync(false, ctoken);
     }
 }

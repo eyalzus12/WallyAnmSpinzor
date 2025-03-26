@@ -11,13 +11,13 @@ namespace WallyAnmSpinzor.Internal;
 [SkipLocalsInit]
 internal sealed class DataReader : IDisposable
 {
-    private readonly bool _ownsStream;
+    private readonly bool _leaveOpen;
     private readonly Stream _stream;
     private byte[] _buffer;
 
-    internal DataReader(Stream stream, bool ownsStream = true)
+    internal DataReader(Stream stream, bool leaveOpen = true)
     {
-        _ownsStream = ownsStream;
+        _leaveOpen = leaveOpen;
         _stream = stream;
         _buffer = new byte[8];
     }
@@ -141,12 +141,12 @@ internal sealed class DataReader : IDisposable
 
     private void FillBuffer(int bytes)
     {
-        _stream.ReadExactly(_buffer, 0, bytes);
+        _stream.ReadExactly(_buffer.AsSpan(0, bytes));
     }
 
-    private ValueTask FillBufferAsync(int bytes, CancellationToken cancellationToken = default)
+    private async ValueTask FillBufferAsync(int bytes, CancellationToken cancellationToken = default)
     {
-        return _stream.ReadExactlyAsync(_buffer, 0, bytes, cancellationToken);
+        await _stream.ReadExactlyAsync(_buffer.AsMemory(0, bytes), cancellationToken).ConfigureAwait(false);
     }
 
     private void ResizeBufferToFit(ushort length)
@@ -161,7 +161,7 @@ internal sealed class DataReader : IDisposable
 
     public void Dispose()
     {
-        if (_ownsStream)
+        if (!_leaveOpen)
         {
             _stream.Dispose();
         }
